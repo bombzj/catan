@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui, maximum-scale=1.0, user-scalable=0">
+<meta name="keywords" content="Parking,Game"/>
+<title>Catan</title>
+<script src="score.js?i=1"></script>
+<script src="data.js?i=1"></script>
+<script src="catan.js?i=1"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
+<script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+<script src="https://libs.baidu.com/jqueryui/1.8.22/jquery-ui.min.js"></script>
+<style>
+    body, button, span {
+        font-size: 32px;
+        touch-action: manipulation;
+    }
+    body,html {
+        position: fixed;
+    }
+    td {
+        padding-top:5px;
+    }
+    button {
+        padding:10px;
+    }
+    .score, .score span{
+        font-size: 24px;
+    }
+</style>
+</head>
+<body onselectstart="return false;">
+    <canvas id="canvas" width="770" height="700" style="margin:0px;float:left" onselectstart="return false;"></canvas>
+    <table id="tbl">
+        <tr><td>
+            <button id="btnNext" onclick="javascript:next()" disabled="true">next</button><br/>
+        </td></tr>
+        <tr><td class="score">
+            stack <span id="tilesLeft"></span><br/>
+        </td></tr>
+        <tr><td>
+            <button onclick="javascript:if(confirm('Are you sure?'))restart(2, true)">restart 2</button>
+        </td></tr>
+        <tr><td>
+            <button onclick="javascript:if(confirm('Are you sure?'))restart(3, true)">restart 3</button>
+        </td></tr>
+        <tr><td>
+            <button onclick="javascript:edit()">edit</button><br/>
+        </td></tr>
+        <tr><td>
+            <button onclick="javascript:rotateBackup()">rotate</button><br/>
+        </td></tr>
+        <tr><td class="score">
+            blue <span id="score0"></span> <span id="scorep0"></span><br/>
+        </td></tr>
+        <tr><td class="score">
+            red <span id="score1"></span> <span id="scorep1"></span><br/>
+        </td></tr>
+        <tr><td class="score">
+            green <span id="score2"></span> <span id="scorep2"></span><br/>
+        </td></tr>
+        <tr><td>
+            <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>
+            <button id="btnNextGame" onclick="javascript:switchGame(1)">&gt;&gt;</button>
+        </td></tr>
+        <tr><td>
+            <button id="btnDelete" onclick="javascript:deleteTile()">delete</button>
+        </td></tr>
+    </table>
+</body>
+<script>
+
+    init()
+
+</script>
+</html>
