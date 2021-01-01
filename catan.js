@@ -1,5 +1,5 @@
 
-let ctx, grid = 120, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
+let ctx, grid = 100, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
 let offsetX, offsetY
 let touchX, touchY, tileStack, tiles
 let players
@@ -7,6 +7,9 @@ let curPlayer
 let curTile4Token
 let lastTile	// token can place here only
 let tokens
+let curToken
+let stage
+let phase
 
 function init() {
 	btnDelete.disabled = true
@@ -21,6 +24,9 @@ function init() {
 		if(num != 7) {
 			files.push('num' + num)
 		}
+	}
+	for(let num = 0;num < 6;num++) {
+		files.push('sea' + num)
 	}
 	for(let c of allColors) {
 		files.push(c + city)
@@ -139,15 +145,16 @@ function restart(playerNumber = 2, clear = false) {
 					settlement: 5,
 					city: 4,
 					score: 0,
+					res: [0, 0, 0, 0, 0, 0]
 				},)
 		}
 
 		// scores.addTile(initTile)
 		// scores.addTile(initTile2)
-		curPlayer = 0
+		stage = stageInit
 
 		tileStack = []
-		tokens = []
+		
 		let start
 		let tileIds = []
 		for(let tile of tileTypes) {
@@ -165,6 +172,7 @@ function restart(playerNumber = 2, clear = false) {
 		shuffle(numberTags)
 
 		board = []
+		tokens = []
 		for(let i = 0;i < 10;i++) {
 			board[i] = []
 		}
@@ -186,12 +194,15 @@ function restart(playerNumber = 2, clear = false) {
 			board[tile.x][tile.y] = tile
 		}
 
-
+		// initial all slots of tiles
 		for(let tile of tiles) {
 			for(let i = 0;i < 6;i++) {
 				if(!tile.vSlot[i]) {
+					let placeOffset = hexVertexOffset[i]
 					let slot = {
-						tile: tile
+						tile: tile,
+						x: tile.x * square3 + placeOffset[0],
+						y: tile.y + tile.x / 2 + placeOffset[1]
 					}
 					vSlots.push(slot)
 					tile.vSlot[i] = slot
@@ -206,8 +217,12 @@ function restart(playerNumber = 2, clear = false) {
 					}
 				}
 				if(!tile.eSlot[i]) {
+					let placeOffset = hexEdgeOffset[i]
 					let slot = {
-						tile: tile
+						tile: tile,
+						rotate: i / 6,
+						x: tile.x * square3 + placeOffset[0],
+						y: tile.y + tile.x / 2 + placeOffset[1]
 					}
 					eSlots.push(slot)
 					tile.eSlot[i] = slot
@@ -220,19 +235,44 @@ function restart(playerNumber = 2, clear = false) {
 			}
 		}
 
-		
-		offsetX = 20 //-grid * (boardWidth / 2 - 2)
-		offsetY = -200 //-grid * (boardWidth / 2 - 3)
+	
+		offsetX = 40 //-grid * (boardWidth / 2 - 2)
+		offsetY = -110 //-grid * (boardWidth / 2 - 3)
+
+		next()
 	}
 
 
 	tilesLeft.innerHTML = tileStack.length
 	for(let i = 0;i < players.length;i++) {
-		document.getElementById("score" + i).innerHTML = players[i].score
+		for(let res = 1;res < 6;res++) {
+			tableRes.rows[i + 1].cells[res].innerHTML = players[i].res[res]
+		}
+		// document.getElementById("score" + i).innerHTML = players[i].score
 	}
 	drawAll()
 
-	checkFinish()
+	// checkFinish()
+}
+
+function addToken(player, slot, type) {
+	if(type == road) {
+		let token = {
+			type: type,
+			player: player,
+			slot: slot
+		}
+		slot.token = token
+		tokens.push(token)
+	} else if(type == city || type == settlement) {
+		let token = {
+			type: type,
+			player: player,
+			slot: slot
+		}
+		slot.token = token
+		tokens.push(token)
+	}
 }
 
 function checkFinish() {
@@ -260,18 +300,76 @@ function shuffle(arr) {
 }
 
 function next() {
-	if(lastTile) {
-		scores.checkToken()
-		for(let i = 0;i < players.length;i++) {
-			document.getElementById("score" + i).innerHTML = players[i].score
+	if(stage == stageInit) {
+		stage = stageSettle1
+		phase = phaseSettlement
+		curPlayer = 0
+		curToken = {
+			player: players[curPlayer],
+			type: settlement
 		}
-		lastTile = undefined
-		curPlayer = (curPlayer + 1) % players.length
-		btnNext.disabled = true
-		drawAll()
-		saveGame()
+	} else if(stage == stageSettle1) {
+		if(curToken.slot) {
+			addToken(curToken.player, curToken.slot, curToken.type)
+			if(phase == phaseSettlement) {
+				curToken = {
+					player: players[curPlayer],
+					type: road
+				}
+				phase = phaseRoad
+			} else if(phase == phaseRoad) {
+				curPlayer++
+				if(curPlayer >= players.length) {
+					stage = stageSettle2
+					curPlayer = players.length - 1
+				}
+				curToken = {
+					player: players[curPlayer],
+					type: settlement
+				}
+				phase = phaseSettlement
+			}
+		}
+	} else if(stage == stageSettle2) {
+		if(curToken.slot) {
+			addToken(curToken.player, curToken.slot, curToken.type)
+			if(phase == phaseSettlement) {
+				curToken = {
+					player: players[curPlayer],
+					type: road
+				}
+				phase = phaseRoad
+			} else if(phase == phaseRoad) {
+				curPlayer--
+				if(curPlayer < 0) {
+					stage = stagePlay
+					curToken = undefined
+					curPlayer = players.length - 1
+				} else {
+					curToken = {
+						player: players[curPlayer],
+						type: settlement
+					}
+				}
+				phase = phaseSettlement
+			}
+		}
+	} else {
+
 	}
-	checkFinish()
+	drawAll()
+	// if(lastTile) {
+	// 	scores.checkToken()
+	// 	for(let i = 0;i < players.length;i++) {
+	// 		document.getElementById("score" + i).innerHTML = players[i].score
+	// 	}
+	// 	lastTile = undefined
+	// 	curPlayer = (curPlayer + 1) % players.length
+	// 	btnNext.disabled = true
+	// 	drawAll()
+	// 	saveGame()
+	// }
+	// checkFinish()
 }
 
 // toggle edit mode
@@ -295,8 +393,15 @@ function empty() {
 	}
 }
 
+const tokenInitPos = {
+	x: 550,
+	y: 30
+}
 function drawAll(c) {
 	ctx.clearRect(0,0,canvas.width,canvas.height); 
+	for(let i = 0;i < 6;i++) {
+		draw('sea' + i, grid * seaPos[i][0] + offsetX, grid * seaPos[i][1] + offsetY, grid * 3.2, grid, seaPos[i][2])
+	}
 	for(let tile of tiles) {
 		draw(tile.type.id, grid * (tile.x) * square3 + offsetX, grid * (tile.y + tile.x / 2) + offsetY, grid / square3, grid)
 		if(tile.number) {
@@ -316,92 +421,31 @@ function drawAll(c) {
 		// 	}
 		// }
 	}
-	let tokens = [
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 0,
-		},
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 1,
-		},
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 2,
-		},
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 3,
-		},
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 4,
-		},
-		{
-			type: city,
-			x: 2,
-			y: 2,
-			place: 5,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 0,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 0,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 1,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 2,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 3,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 4,
-		},
-		{
-			type: road,
-			x: 4,
-			y: 4,
-			place: 5,
-		},
-	]
+	
 	for(let token of tokens) {
-		let placeOffset = token.type == road ? hexEdgeOffset[token.place] : hexVertexOffset[token.place]
-		draw('red' + token.type, grid * ((token.x) * square3 + placeOffset[0]) + offsetX, grid * (token.y + token.x / 2 + placeOffset[1]) + offsetY, 
-					grid/6, grid/6)
+		drawToken(token)
+	}
+	if(curToken) {
+		let token = curToken
+		if(token.slot) {
+			drawToken(token)
+		}
+		
+		if(token.type == road) {
+			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/4, grid/10)
+		} else {
+			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/3, grid/3)
+		}
 	}
 	// drawBackup()
+}
+
+function drawToken(token) {
+	if(token.type == road) {
+		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/4, grid/10, token.slot.rotate)
+	} else {
+		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/6, grid/6)
+	}
 }
 
 function rotate(arr, r) {
@@ -416,31 +460,6 @@ function rotate(arr, r) {
 	}
 }
 
-
-const zoomTile = 2;
-function drawTokenPlace(tile, ex, ey) {
-	let x = grid * tile.x + offsetX
-	let y = grid * tile.y + offsetY
-	draw(tile.type.id, x, y, grid * zoomTile, grid * zoomTile)
-	if(tile.type.place) {
-		for(let place of tile.type.place) {
-			let placeR = rotate(place, tile.rotate)
-			let px = x + grid * placeR[0] * zoomTile
-			let py = y + grid * placeR[1] * zoomTile
-			if(Math.abs(ex - px) < grid / 3 &&
-					Math.abs(ey - py) < grid / 3) {
-				
-			} else {
-				ctx.globalAlpha = 0.5
-			}
-			draw(players[curPlayer].color, 
-				px - grid / 3, 
-				py - grid / 3,
-				grid / 1.5, grid / 1.5)
-			ctx.globalAlpha = 1
-		}
-	}
-}
 
 function placeToken(tile, ex, ey) {
 	let player = players[curPlayer]
@@ -521,13 +540,12 @@ function drawBackup() {
 	}
 }
 
-const rotateDegree = [0, Math.PI/2, Math.PI, Math.PI*3/2]
 function draw(file, x, y, w = grid, h = grid, rotate = 0) {
 	if(rotate > 0) {
 		ctx.save()
-		ctx.translate(x+w/2, y+h/2)
-		ctx.rotate(rotateDegree[rotate])
-		ctx.translate(-x-w/2, -y-h/2)
+		ctx.translate(x, y)
+		ctx.rotate(Math.PI*2*rotate)
+		ctx.translate(-x, -y)
 	}
 	ctx.drawImage(images[file], x - w/2, y-h/2, w, h)
 	if(rotate > 0) {
@@ -537,6 +555,30 @@ function draw(file, x, y, w = grid, h = grid, rotate = 0) {
 
 let dragX = null, dragY
 function touchstart(ex, ey) {
+	if(curToken) {
+		if(curToken.type == road) {
+			for(let slot of eSlots) {
+				let dx = (ex - offsetX) / grid - slot.x
+				let dy = (ey - offsetY) / grid - slot.y
+				if(dx * dx + dy * dy < 0.04) {
+					curToken.slot = slot
+					btnNext.disabled = false
+					break
+				}
+			}
+		} else if(curToken.type == settlement || curToken.type == city) {
+			for(let slot of vSlots) {
+				let dx = (ex - offsetX) / grid - slot.x
+				let dy = (ey - offsetY) / grid - slot.y
+				if(dx * dx + dy * dy < 0.04) {
+					curToken.slot = slot
+					btnNext.disabled = false
+					break
+				}
+			}
+		}
+		drawAll()
+	}
 	if(1) return
 	let x = ex / grid
 	let y = ey / grid
@@ -579,7 +621,6 @@ function touchstart(ex, ey) {
 				// break;
 			}
 			curTile4Token = tile
-			drawTokenPlace(tile)
 			return
 		}
 	}
@@ -598,9 +639,7 @@ function touchmove(ex, ey) {
 		drawAll()
 		return
 	}
-	if(curTile4Token) {
-		drawTokenPlace(curTile4Token, ex, ey)
-	}
+
 	let x = Math.floor((ex - offsetX) / grid)
 	let y = Math.floor((ey - offsetY) / grid)
 	if(true) {

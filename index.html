@@ -22,6 +22,10 @@
     td {
         padding-top:5px;
     }
+    #tableRes td {
+        font-size: 16px;
+        text-align:center;
+    }
     button {
         padding:10px;
     }
@@ -31,7 +35,7 @@
 </style>
 </head>
 <body onselectstart="return false;">
-    <canvas id="canvas" width="770" height="700" style="margin:0px;float:left" onselectstart="return false;"></canvas>
+    <canvas id="canvas" width="600" height="700" style="margin:0px;float:left" onselectstart="return false;"></canvas>
     <table id="tbl">
         <tr><td>
             <button id="btnNext" onclick="javascript:next()" disabled="true">next</button><br/>
@@ -45,20 +49,33 @@
         <tr><td>
             <button onclick="javascript:if(confirm('Are you sure?'))restart(3, true)">restart 3</button>
         </td></tr>
-        <tr><td>
-            <button onclick="javascript:edit()">edit</button><br/>
-        </td></tr>
-        <tr><td>
-            <button onclick="javascript:rotateBackup()">rotate</button><br/>
-        </td></tr>
         <tr><td class="score">
-            blue <span id="score0"></span> <span id="scorep0"></span><br/>
-        </td></tr>
-        <tr><td class="score">
-            red <span id="score1"></span> <span id="scorep1"></span><br/>
-        </td></tr>
-        <tr><td class="score">
-            green <span id="score2"></span> <span id="scorep2"></span><br/>
+            <table id="tableRes">
+                <tr>
+                    <td></td>
+                    <td>羊</td>
+                    <td>麦</td>
+                    <td>木</td>
+                    <td>砖</td>
+                    <td>铁</td>
+                </tr>
+                <tr>
+                    <td>蓝</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>红</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
         </td></tr>
         <tr><td>
             <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>

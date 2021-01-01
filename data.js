@@ -15,6 +15,15 @@ const road = 1
 const settlement = 2
 const city = 3
 
+const stageInit = 0
+const stageSettle1 = 1
+const stageSettle2 = 2
+const stagePlay = 3
+
+const phaseSettlement = 1
+const phaseRoad = 2
+
+
 const allColors = [
 	'blue', 'red', 'green', 'yellow', 'white', 'brown'
 ]
@@ -63,6 +72,15 @@ const hexEdgeOffset = [
 	[0, 1/2],
 	[-square3/2, 1/4],
 	[-square3/2, -1/4],
+]
+
+const seaPos = [
+	[3.4, 2.15, 1/12],
+	[5, 4, 3/12],
+	[4.15, 6.4, 5/12],
+	[1.75, 6.85, 7/12],
+	[0.1, 4.96, 9/12],
+	[0.95, 2.6, 11/12],
 ]
 
 const vMatch = [
