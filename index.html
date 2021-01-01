@@ -23,8 +23,11 @@
         padding-top:5px;
     }
     #tableRes td {
-        font-size: 16px;
+        font-size: 20px;
         text-align:center;
+    }
+    .highlight td {
+        background-color:yellow;
     }
     button {
         padding:10px;
@@ -38,19 +41,20 @@
     <canvas id="canvas" width="600" height="700" style="margin:0px;float:left" onselectstart="return false;"></canvas>
     <table id="tbl">
         <tr><td>
-            <button id="btnNext" onclick="javascript:next()" disabled="true">next</button><br/>
+            <button id="btnConfirmBuy" onclick="javascript:confirmBuy()" disabled="disabled">ok</button>
+            <button id="btnNext" onclick="javascript:next()">next</button>
         </td></tr>
         <tr><td class="score">
-            stack <span id="tilesLeft"></span><br/>
+            dice <span id="labelDice"></span><br/>
         </td></tr>
-        <tr><td>
+        <tr style="display:none"><td>
             <button onclick="javascript:if(confirm('Are you sure?'))restart(2, true)">restart 2</button>
         </td></tr>
-        <tr><td>
+        <tr style="display:none"><td>
             <button onclick="javascript:if(confirm('Are you sure?'))restart(3, true)">restart 3</button>
         </td></tr>
         <tr><td class="score">
-            <table id="tableRes">
+            <table id="tableRes" border="1" style="border-collapse: collapse" cellpadding="2">
                 <tr>
                     <td></td>
                     <td>羊</td>
@@ -58,9 +62,11 @@
                     <td>木</td>
                     <td>砖</td>
                     <td>铁</td>
+                    <td>分数</td>
                 </tr>
                 <tr>
                     <td>蓝</td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -74,14 +80,20 @@
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
                 </tr>
             </table>
         </td></tr>
         <tr><td>
+            <button id="btnRoad" onclick="javascript:buyRoad()">路</button>
+            <button id="btnSettlement" onclick="javascript:buySettlement()">村庄</button>
+            <button id="btnCity" onclick="javascript:buyCity()">城市</button>
+        </td></tr>
+        <tr style="display:none"><td>
             <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>
             <button id="btnNextGame" onclick="javascript:switchGame(1)">&gt;&gt;</button>
         </td></tr>
-        <tr><td>
+        <tr style="display:none"><td>
             <button id="btnDelete" onclick="javascript:deleteTile()">delete</button>
         </td></tr>
     </table>

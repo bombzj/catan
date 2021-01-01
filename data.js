@@ -20,40 +20,48 @@ const stageSettle1 = 1
 const stageSettle2 = 2
 const stagePlay = 3
 
-const phaseSettlement = 1
-const phaseRoad = 2
-
 
 const allColors = [
 	'blue', 'red', 'green', 'yellow', 'white', 'brown'
 ]
 
 const tileTypes = [
-	{	// desert	
+	{
 		start: true,
 		count:	1,
+		name: 'desert'
 	},
-	{	// pasture		
+	{	// 		
 		count:	4,
 		resource: wool,
+		name: 'pasture'
 	},
-	{	// field	
-		count:	4,
-		resource: grain,
-	},
-	{	// forest	
+	{	// 	
 		count:	4,
 		resource: wood,
+		name: 'forest'
 	},
-	{	// hill
+	{	// 	
+		count:	4,
+		resource: grain,
+		name: 'field'
+	},
+	{	// 
 		count:	3,
 		resource: brick,
+		name: 'hill'
 	},
-	{	// mountain
+	{	// 
 		count:	3,
 		resource: ore,
+		name: 'mountain'
 	},
 ]
+
+let tokenCost = []
+tokenCost[road] = [0, 0, 1, 0, 1, 0]
+tokenCost[settlement] = [0, 1, 1, 1, 1, 0]
+tokenCost[city] = [0, 0, 0, 2, 0, 3]
 
 const square3 = Math.sqrt(3)/2
 const hexVertexOffset = [

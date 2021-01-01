@@ -9,7 +9,8 @@ let lastTile	// token can place here only
 let tokens
 let curToken
 let stage
-let phase
+let phase, phaseTokenType = [settlement, road]
+let robberToken = {}
 
 function init() {
 	btnDelete.disabled = true
@@ -145,13 +146,12 @@ function restart(playerNumber = 2, clear = false) {
 					settlement: 5,
 					city: 4,
 					score: 0,
-					res: [0, 0, 0, 0, 0, 0]
+					res: [0, 10, 10, 10, 10, 10]
 				},)
 		}
 
 		// scores.addTile(initTile)
 		// scores.addTile(initTile2)
-		stage = stageInit
 
 		tileStack = []
 		
@@ -196,6 +196,8 @@ function restart(playerNumber = 2, clear = false) {
 
 		// initial all slots of tiles
 		for(let tile of tiles) {
+			tile.posX = tile.x * square3
+			tile.posY = tile.y + tile.x / 2
 			for(let i = 0;i < 6;i++) {
 				if(!tile.vSlot[i]) {
 					let placeOffset = hexVertexOffset[i]
@@ -239,17 +241,21 @@ function restart(playerNumber = 2, clear = false) {
 		offsetX = 40 //-grid * (boardWidth / 2 - 2)
 		offsetY = -110 //-grid * (boardWidth / 2 - 3)
 
+		robberToken.tile = tiles[0]
+
+		stage = stageInit
+		if(true) {
+			stage = stagePlay
+			curPlayer = 0
+			addToken(players[0], board[3][2].vSlot[2], city)
+		}
+		btnNext.disabled = false
 		next()
 	}
 
 
-	tilesLeft.innerHTML = tileStack.length
-	for(let i = 0;i < players.length;i++) {
-		for(let res = 1;res < 6;res++) {
-			tableRes.rows[i + 1].cells[res].innerHTML = players[i].res[res]
-		}
-		// document.getElementById("score" + i).innerHTML = players[i].score
-	}
+	labelDice.innerHTML = '?'
+	drawRes()
 	drawAll()
 
 	// checkFinish()
@@ -270,9 +276,47 @@ function addToken(player, slot, type) {
 			player: player,
 			slot: slot
 		}
+		if(slot.token) {
+			tokens = tokens.filter(item => {
+				return item != slot.token
+			})
+		}
 		slot.token = token
+		player.score += 1
 		tokens.push(token)
 	}
+}
+
+function buyToken(type) {
+	if(curToken) {
+		return false
+	}
+	let player = players[curPlayer]
+	let cost = tokenCost[type]
+	for(let i = 1;i < 6;i++) {
+		if(player.res[i] < cost[i]) {
+			return false
+		}
+	}
+	for(let i = 1;i < 6;i++) {
+		player.res[i] -= cost[i]
+	}
+	curToken = {
+		player: player,
+		type: type
+	}
+	btnNext.disabled = true
+	drawRes()
+	drawAll()
+}
+function buyRoad() {
+	buyToken(road)
+}
+function buySettlement() {
+	buyToken(settlement)
+}
+function buyCity() {
+	buyToken(city)
 }
 
 function checkFinish() {
@@ -299,64 +343,116 @@ function shuffle(arr) {
 	}
 }
 
+function confirmBuy() {
+	if(curToken && curToken.slot) {
+		addToken(curToken.player, curToken.slot, curToken.type)
+		curToken = undefined
+		btnNext.disabled = false
+		btnConfirmBuy.disabled = true
+		if(stage == stageSettle1 || stage == stageSettle2) {
+			next()
+		} else {
+			drawRes()
+			drawAll()
+		}
+	}
+}
+
 function next() {
+	if(curToken) {
+		return
+	}
 	if(stage == stageInit) {
 		stage = stageSettle1
-		phase = phaseSettlement
+		phase = 0
 		curPlayer = 0
+		addHighlight()
 		curToken = {
 			player: players[curPlayer],
-			type: settlement
+			type: phaseTokenType[0]
 		}
 	} else if(stage == stageSettle1) {
-		if(curToken.slot) {
-			addToken(curToken.player, curToken.slot, curToken.type)
-			if(phase == phaseSettlement) {
-				curToken = {
-					player: players[curPlayer],
-					type: road
+		phase++
+		if(phase < phaseTokenType.length) {
+			curToken = {
+				player: players[curPlayer],
+				type: phaseTokenType[phase]
+			}
+		} else {
+			removeHighlight()
+			curPlayer++
+			if(curPlayer >= players.length) {
+				stage = stageSettle2
+				// initial resource for each player
+				for(let tile of tiles) {
+					for(let slot of tile.vSlot) {
+						if(slot.token) {
+							let token = slot.token
+							token.player.res[tile.type.resource] += 1
+						}
+					}
 				}
-				phase = phaseRoad
-			} else if(phase == phaseRoad) {
-				curPlayer++
-				if(curPlayer >= players.length) {
-					stage = stageSettle2
-					curPlayer = players.length - 1
-				}
-				curToken = {
-					player: players[curPlayer],
-					type: settlement
-				}
-				phase = phaseSettlement
+				curPlayer = players.length - 1
+			}
+			addHighlight()
+			phase = 0
+			curToken = {
+				player: players[curPlayer],
+				type: phaseTokenType[phase]
 			}
 		}
 	} else if(stage == stageSettle2) {
-		if(curToken.slot) {
-			addToken(curToken.player, curToken.slot, curToken.type)
-			if(phase == phaseSettlement) {
+		phase++
+		if(phase < phaseTokenType.length) {
+			curToken = {
+				player: players[curPlayer],
+				type: phaseTokenType[phase]
+			}
+		} else {
+			removeHighlight()
+			curPlayer--
+			if(curPlayer < 0) {
+				stage = stagePlay
+				curPlayer = 0
+			} else {
+				phase = 0
 				curToken = {
 					player: players[curPlayer],
-					type: road
+					type: phaseTokenType[phase]
 				}
-				phase = phaseRoad
-			} else if(phase == phaseRoad) {
-				curPlayer--
-				if(curPlayer < 0) {
-					stage = stagePlay
-					curToken = undefined
-					curPlayer = players.length - 1
-				} else {
-					curToken = {
-						player: players[curPlayer],
-						type: settlement
-					}
-				}
-				phase = phaseSettlement
 			}
+			addHighlight()
 		}
 	} else {
-
+		removeHighlight()
+		curPlayer++
+		if(curPlayer >= players.length) {
+			curPlayer = 0
+		}
+		addHighlight()
+		let dice1 = Math.floor(Math.random() * 6) + 1
+		let dice2 = Math.floor(Math.random() * 6) + 1
+		let dice = dice1 + dice2
+		labelDice.innerHTML = dice
+		for(let tile of tiles) {
+			if(tile.number == dice) {
+				for(let slot of tile.vSlot) {
+					if(slot.token) {
+						let token = slot.token
+						if(token.type == city) {
+							token.player.res[tile.type.resource] += 2
+						} else {
+							token.player.res[tile.type.resource] += 1
+						}
+					}
+				}
+			}
+		}
 	}
+	if(curToken) {
+		btnNext.disabled = true
+	}
+	drawRes()
 	drawAll()
 	// if(lastTile) {
 	// 	scores.checkToken()
@@ -370,6 +466,13 @@ function next() {
 	// 	saveGame()
 	// }
 	// checkFinish()
+}
+
+function addHighlight() {
+	tableRes.rows[curPlayer + 1].className = "highlight"
+}
+function removeHighlight() {
+	tableRes.rows[curPlayer + 1].className = ""
 }
 
 // toggle edit mode
@@ -390,6 +493,15 @@ function empty() {
 	drawAll()
 	if(editMode) {
 		drawBackup()
+	}
+}
+
+function drawRes() {
+	for(let i = 0;i < players.length;i++) {
+		for(let res = 1;res < 6;res++) {
+			tableRes.rows[i + 1].cells[res].innerHTML = players[i].res[res]
+		}
+		tableRes.rows[i + 1].cells[6].innerHTML = players[i].score
 	}
 }
 
@@ -436,6 +548,10 @@ function drawAll(c) {
 		} else {
 			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/3, grid/3)
 		}
+	}
+	if(robberToken) {
+		let tile = robberToken.tile
+		draw('robber', grid * tile.posX + offsetX, grid * tile.posY + offsetY, grid/4, grid/2)
 	}
 	// drawBackup()
 }
@@ -560,9 +676,10 @@ function touchstart(ex, ey) {
 			for(let slot of eSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04) {
+				if(dx * dx + dy * dy < 0.04 &&
+					!slot.token) {
 					curToken.slot = slot
-					btnNext.disabled = false
+					btnConfirmBuy.disabled = false
 					break
 				}
 			}
@@ -570,9 +687,10 @@ function touchstart(ex, ey) {
 			for(let slot of vSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04) {
+				if(dx * dx + dy * dy < 0.04 &&
+					(!slot.token || slot.token.type == settlement && curToken.type == city)) {
 					curToken.slot = slot
-					btnNext.disabled = false
+					btnConfirmBuy.disabled = false
 					break
 				}
 			}
