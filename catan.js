@@ -75,6 +75,8 @@ function init() {
 		touchend(event.changedTouches[0].clientX - bcr.x, event.changedTouches[0].clientY - bcr.y)
 	}, false);
 
+	// document.styleSheets[0].insertRule('.cssPlayer {background-color: ' + cssColor[curPlayer] + '}', 0);
+	// cssRulePlayer = document.styleSheets[0].rules[0]
 	loadAllGame()
 	restart()
 }
@@ -146,7 +148,9 @@ function restart(playerNumber = 2, clear = false) {
 					settlement: 5,
 					city: 4,
 					score: 0,
-					res: [0, 10, 10, 10, 10, 10]
+					// res: [0, 10, 10, 10, 10, 10],
+					res: [0, 0,0,0,0,0],
+					exchange: []	// 3:1 and then 2:1 for each resource
 				},)
 		}
 
@@ -237,6 +241,10 @@ function restart(playerNumber = 2, clear = false) {
 			}
 		}
 
+		// for harbor exchange rate
+		for(let harbor of harbors) {
+			board[harbor[0]][harbor[1]].vSlot[harbor[2]].exchange = harbor[3]
+		}
 	
 		offsetX = 40 //-grid * (boardWidth / 2 - 2)
 		offsetY = -110 //-grid * (boardWidth / 2 - 3)
@@ -245,9 +253,9 @@ function restart(playerNumber = 2, clear = false) {
 
 		stage = stageInit
 		if(true) {
-			stage = stagePlay
-			curPlayer = 0
-			addToken(players[0], board[3][2].vSlot[2], city)
+			// stage = stagePlay
+			// curPlayer = 0
+			// addToken(players[0], board[3][2].vSlot[2], settlement)
 		}
 		btnNext.disabled = false
 		next()
@@ -270,6 +278,7 @@ function addToken(player, slot, type) {
 		}
 		slot.token = token
 		tokens.push(token)
+		player.road--
 	} else if(type == city || type == settlement) {
 		let token = {
 			type: type,
@@ -284,7 +293,20 @@ function addToken(player, slot, type) {
 		slot.token = token
 		player.score += 1
 		tokens.push(token)
+		if(type == city) {
+			player.settlement++
+			player.city--
+		} else {
+			if(slot.exchange >= 0) {
+				player.exchange[slot.exchange] = true
+				updateExchangeRate()
+			}
+			player.settlement--
+		}
+	} else if(type == robber) {
+		robberToken.tile = slot
 	}
+	curToken = undefined
 }
 
 function buyToken(type) {
@@ -292,6 +314,15 @@ function buyToken(type) {
 		return false
 	}
 	let player = players[curPlayer]
+	if(type == road && player.road <= 0) {
+		return false
+	}
+	if(type == city && player.city <= 0) {
+		return false
+	}
+	if(type == settlement && player.settlement <= 0) {
+		return false
+	}
 	let cost = tokenCost[type]
 	for(let i = 1;i < 6;i++) {
 		if(player.res[i] < cost[i]) {
@@ -306,6 +337,7 @@ function buyToken(type) {
 		type: type
 	}
 	btnNext.disabled = true
+	btnCancelBuy.disabled = false
 	drawRes()
 	drawAll()
 }
@@ -343,19 +375,79 @@ function shuffle(arr) {
 	}
 }
 
-function confirmBuy() {
-	if(curToken && curToken.slot) {
-		addToken(curToken.player, curToken.slot, curToken.type)
-		curToken = undefined
-		btnNext.disabled = false
-		btnConfirmBuy.disabled = true
-		if(stage == stageSettle1 || stage == stageSettle2) {
-			next()
-		} else {
+function cancelBuy() {
+	if(curToken && stage == stagePlay) {
+		if(curToken.type == road || curToken.type == city || curToken.type == settlement) {
+			let player = players[curPlayer]
+			let cost = tokenCost[curToken.type]
+			for(let i = 1;i < 6;i++) {
+				player.res[i] += cost[i]
+			}
+			curToken = undefined
+			btnCancelBuy.disabled = true
+			btnConfirmBuy.disabled = true
+			btnNext .disabled = false
 			drawRes()
 			drawAll()
 		}
 	}
+}
+
+function confirmBuy() {
+	if(curToken) {
+		if(curToken.slot) {
+			addToken(curToken.player, curToken.slot, curToken.type)
+			btnNext.disabled = false
+			btnConfirmBuy.disabled = true
+			btnCancelBuy.disabled = true
+			if(stage == stageSettle1 || stage == stageSettle2) {
+				next()
+			} else {
+				drawRes()
+				drawAll()
+			}
+		} else if(curToken.type == robber && curToken.tile) {
+			btnNext.disabled = false
+			btnConfirmBuy.disabled = true
+			btnCancelBuy.disabled = true
+			addToken(curToken.player, curToken.tile, curToken.type)
+			drawRes()
+			drawAll()
+		}
+	}
+}
+// rob card, drop card, move robber
+function rob() {
+	curToken = {
+		type: robber
+	}
+}
+
+// exchange resource
+function exchange() {
+	let from = exFrom.selectedIndex + 1
+	let to = exTo.selectedIndex + 1
+	let player = players[curPlayer]
+	let rate = getExchangeRate(from)
+	if(player.res[from] >= rate) {
+		player.res[from] -= rate
+		player.res[to]++
+	}
+	drawRes()
+}
+function getExchangeRate(from) {
+	let player = players[curPlayer]
+	if(player.exchange[exFrom.selectedIndex + 1]) {
+		return 2
+	}
+	if(player.exchange[0]) {
+		return 3
+	}
+	return 4
+}
+function updateExchangeRate() {
+	let rate = getExchangeRate(exFrom.selectedIndex + 1)
+	exchangeRate.innerHTML = rate + ':1'
 }
 
 function next() {
@@ -424,6 +516,7 @@ function next() {
 			addHighlight()
 		}
 	} else {
+		addLog('---------------------')
 		removeHighlight()
 		curPlayer++
 		if(curPlayer >= players.length) {
@@ -433,21 +526,49 @@ function next() {
 		let dice1 = Math.floor(Math.random() * 6) + 1
 		let dice2 = Math.floor(Math.random() * 6) + 1
 		let dice = dice1 + dice2
-		labelDice.innerHTML = dice
-		for(let tile of tiles) {
-			if(tile.number == dice) {
-				for(let slot of tile.vSlot) {
-					if(slot.token) {
-						let token = slot.token
-						if(token.type == city) {
-							token.player.res[tile.type.resource] += 2
-						} else {
-							token.player.res[tile.type.resource] += 1
+		addLog('the dice roll is ' + dice)
+		labelDice.innerHTML = dice1 + "+" + dice2
+		if(dice == 7) {
+			rob()
+		} else {
+			for(let player of players) {
+				player.resAdd = [0, 0, 0, 0, 0, 0]
+				player.resAddAll = 0
+			}
+			for(let tile of tiles) {
+				if(tile.number == dice && robberToken.tile != tile) {
+					for(let slot of tile.vSlot) {
+						if(slot.token) {
+							let token = slot.token
+							if(token.type == city) {
+								token.player.res[tile.type.resource] += 2
+								token.player.resAdd[tile.type.resource] += 2
+								token.player.resAddAll += 2
+							} else {
+								token.player.res[tile.type.resource] += 1
+								token.player.resAdd[tile.type.resource] += 1
+								token.player.resAddAll += 1
+							}
 						}
 					}
 				}
 			}
+			for(let player of players) {
+				let resStr = ''
+				for(let [index, sum] of player.resAdd.entries()) {
+					if(sum > 0) {
+						if(resStr.length > 0) {
+							resStr += ', '
+						}
+						resStr += sum + ' ' + resourceNames[index]
+					}
+				}
+				if(player.resAddAll > 0) {
+					addLog(player.color + ' produced ' + resStr)
+				}
+			}
 		}
+		updateExchangeRate()
 	}
 	if(curToken) {
 		btnNext.disabled = true
@@ -468,11 +589,27 @@ function next() {
 	// checkFinish()
 }
 
+function addLog(log) {
+	labelHistory.innerHTML += log + "\r\n"
+	labelHistory.scrollTop = labelHistory.scrollHeight
+}
+
+const cssColor = [
+	'#6666ff', '#ff4444', '#55ff55', '#ffff66', '#444444', '#66ff99'
+]
+
+// let cssRulePlayer
 function addHighlight() {
-	tableRes.rows[curPlayer + 1].className = "highlight"
+	// cssRulePlayer.style.backgroundColor = cssColor[curPlayer]
+	// tableRes.rows[curPlayer + 1].className = "highlight"
+	let player = players[curPlayer]
+	btnRoad.src = 'res/' + player.color + '1.png'
+	btnSettlement.src = 'res/' + player.color + '2.png'
+	btnCity.src = 'res/' + player.color + '3.png'
+
 }
 function removeHighlight() {
-	tableRes.rows[curPlayer + 1].className = ""
+	// tableRes.rows[curPlayer + 1].className = ""
 }
 
 // toggle edit mode
@@ -497,12 +634,14 @@ function empty() {
 }
 
 function drawRes() {
-	for(let i = 0;i < players.length;i++) {
-		for(let res = 1;res < 6;res++) {
-			tableRes.rows[i + 1].cells[res].innerHTML = players[i].res[res]
-		}
-		tableRes.rows[i + 1].cells[6].innerHTML = players[i].score
+	let player = players[curPlayer]
+	for(let res = 1;res < 6;res++) {
+		tableRes.rows[1].cells[res - 1].innerHTML = player.res[res]
 	}
+	tableRes.rows[1].cells[5].innerHTML = player.score
+	labelRoad.innerHTML = player.road
+	labelSettlement.innerHTML = player.settlement
+	labelCity.innerHTML = player.city
 }
 
 const tokenInitPos = {
@@ -542,11 +681,16 @@ function drawAll(c) {
 		if(token.slot) {
 			drawToken(token)
 		}
+		if(token.type == robber && token.tile) {
+			draw('robber', grid * token.tile.posX + offsetX, grid * token.tile.posY + offsetY, grid/4, grid/2)
+		}
 		
 		if(token.type == road) {
 			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/4, grid/10)
-		} else {
+		} else if(token.type == city || token.type == settlement) {
 			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/3, grid/3)
+		} else if(token.type == robber) {
+			draw('robber', tokenInitPos.x, tokenInitPos.y, grid/4, grid/2)
 		}
 	}
 	if(robberToken) {
@@ -676,8 +820,7 @@ function touchstart(ex, ey) {
 			for(let slot of eSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04 &&
-					!slot.token) {
+				if(dx * dx + dy * dy < 0.04 && !slot.token) {
 					curToken.slot = slot
 					btnConfirmBuy.disabled = false
 					break
@@ -687,11 +830,20 @@ function touchstart(ex, ey) {
 			for(let slot of vSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04 &&
-					(!slot.token || slot.token.type == settlement && curToken.type == city)) {
+				if(dx * dx + dy * dy < 0.04 && (!slot.token && curToken.type == settlement || slot.token && slot.token.type == settlement && curToken.type == city)) {
 					curToken.slot = slot
 					btnConfirmBuy.disabled = false
 					break
+				}
+			}
+		} else if(curToken.type == robber) {
+			for(let tile of tiles) {
+				let dx = (ex - offsetX) / grid - tile.posX
+				let dy = (ey - offsetY) / grid - tile.posY
+				if(dx * dx + dy * dy < 0.1 && tile != robberToken.tile) {
+					curToken.tile = tile
+					btnConfirmBuy.disabled = false
+					break	
 				}
 			}
 		}

@@ -6,28 +6,31 @@
 <meta name="keywords" content="Parking,Game"/>
 <title>Catan</title>
 <script src="score.js?i=1"></script>
-<script src="data.js?i=1"></script>
-<script src="catan.js?i=1"></script>
+<script src="data.js?i=4"></script>
+<script src="catan.js?i=3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
 <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="https://libs.baidu.com/jqueryui/1.8.22/jquery-ui.min.js"></script>
 <style>
-    body, button, span {
+    body, button, span, select {
         font-size: 32px;
         touch-action: manipulation;
     }
     body,html {
         position: fixed;
     }
-    td {
-        padding-top:5px;
-    }
     #tableRes td {
         font-size: 20px;
         text-align:center;
+        padding-left:4px;
+        padding-right:4px;
     }
-    .highlight td {
-        background-color:yellow;
+    #tableRes img {
+        width: 30px;
+        height: 30px;
+    }
+    .resImg td {
+        padding: 0px;
     }
     button {
         padding:10px;
@@ -42,10 +45,11 @@
     <table id="tbl">
         <tr><td>
             <button id="btnConfirmBuy" onclick="javascript:confirmBuy()" disabled="disabled">ok</button>
+            <button id="btnCancelBuy" onclick="javascript:cancelBuy()" disabled="disabled">cancel</button>
             <button id="btnNext" onclick="javascript:next()">next</button>
         </td></tr>
         <tr><td class="score">
-            dice <span id="labelDice"></span><br/>
+            dice roll: <span id="labelDice"></span><br/>
         </td></tr>
         <tr style="display:none"><td>
             <button onclick="javascript:if(confirm('Are you sure?'))restart(2, true)">restart 2</button>
@@ -55,26 +59,15 @@
         </td></tr>
         <tr><td class="score">
             <table id="tableRes" border="1" style="border-collapse: collapse" cellpadding="2">
-                <tr>
-                    <td></td>
-                    <td>羊</td>
-                    <td>麦</td>
-                    <td>木</td>
-                    <td>砖</td>
-                    <td>铁</td>
-                    <td>分数</td>
+                <tr class="resImg">
+                    <td><img src="res/res1.png"></td>
+                    <td><img src="res/res2.png"></td>
+                    <td><img src="res/res3.png"></td>
+                    <td><img src="res/res4.png"></td>
+                    <td><img src="res/res5.png"></td>
+                    <td>score</td>
                 </tr>
-                <tr>
-                    <td>蓝</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td>红</td>
+                <tr class="cssPlayer">
                     <td></td>
                     <td></td>
                     <td></td>
@@ -85,9 +78,9 @@
             </table>
         </td></tr>
         <tr><td>
-            <button id="btnRoad" onclick="javascript:buyRoad()">路</button>
-            <button id="btnSettlement" onclick="javascript:buySettlement()">村庄</button>
-            <button id="btnCity" onclick="javascript:buyCity()">城市</button>
+            <input id="btnRoad" type="image" src="res/blue1.png" onclick="javascript:buyRoad()"> <span id="labelRoad"></span>
+            <input id="btnSettlement" type="image" src="res/blue2.png" onclick="javascript:buySettlement()"> <span id="labelSettlement"></span>
+            <input id="btnCity" type="image" src="res/blue3.png" onclick="javascript:buyCity()"> <span id="labelCity"></span>
         </td></tr>
         <tr style="display:none"><td>
             <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>
@@ -95,6 +88,27 @@
         </td></tr>
         <tr style="display:none"><td>
             <button id="btnDelete" onclick="javascript:deleteTile()">delete</button>
+        </td></tr>
+        <tr><td>
+            <select id="exFrom" onchange="javascript:updateExchangeRate()">
+                <option>羊</option>
+                <option>麦</option>
+                <option>木</option>
+                <option>砖</option>
+                <option>铁</option>
+            </select>
+            <span id="exchangeRate" onchange="javascript:updateExchangeRate()">4:1</span>
+            <select id="exTo">
+                <option>羊</option>
+                <option>麦</option>
+                <option>木</option>
+                <option>砖</option>
+                <option>铁</option>
+            </select>
+            <button id="btnExchange" onclick="javascript:exchange();">换</button>
+        </td></tr>
+        <tr><td>
+            <textarea readonly="readonly" id="labelHistory" style="width:250px;height:150px"></textarea>
         </td></tr>
     </table>
 </body>

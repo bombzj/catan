@@ -14,6 +14,7 @@ const ore = 5
 const road = 1
 const settlement = 2
 const city = 3
+const robber = 10
 
 const stageInit = 0
 const stageSettle1 = 1
@@ -23,6 +24,9 @@ const stagePlay = 3
 
 const allColors = [
 	'blue', 'red', 'green', 'yellow', 'white', 'brown'
+]
+const resourceNames = [
+	'', 'wool', 'grain', 'wood', 'brick', 'ore'
 ]
 
 const tileTypes = [
@@ -59,9 +63,9 @@ const tileTypes = [
 ]
 
 let tokenCost = []
-tokenCost[road] = [0, 0, 1, 0, 1, 0]
+tokenCost[road] = [0, 0, 0, 1, 1, 0]
 tokenCost[settlement] = [0, 1, 1, 1, 1, 0]
-tokenCost[city] = [0, 0, 0, 2, 0, 3]
+tokenCost[city] = [0, 0, 2, 0, 0, 3]
 
 const square3 = Math.sqrt(3)/2
 const hexVertexOffset = [
@@ -131,4 +135,30 @@ const tilePos = [
 	[2, 2],
 	[3, 1],
 	[4, 1],
+]
+
+const harbors = [
+	[5, 1, 1, 0],
+	[5, 1, 2, 0],
+	[4, 4, 2, 0],
+	[4, 4, 3, 0],
+	[3, 5, 3, 0],
+	[3, 5, 4, 0],
+	[1, 3, 0, 0],
+	[1, 3, 5, 0],
+
+	[5, 2, 2, 1],
+	[5, 2, 3, 1],
+	
+	[2, 2, 0, 2],
+	[2, 2, 1, 2],
+
+	[1, 4, 4, 3],
+	[1, 4, 5, 3],
+	
+	[2, 5, 4, 4],
+	[2, 5, 5, 4],
+	
+	[4, 1, 0, 5],
+	[4, 1, 1, 5],
 ]
