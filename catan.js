@@ -153,6 +153,8 @@ function restart(playerNumber = 2, clear = false) {
 					road: 15,
 					settlement: 5,
 					city: 4,
+					allSoldier: 0,
+					allRoad: 0,
 					score: 0,
 					res: [0, 0, 0, 0, 0, 0],
 					develop: [],
@@ -224,7 +226,9 @@ function restart(playerNumber = 2, clear = false) {
 					let slot = {
 						tile: tile,
 						x: tile.x * square3 + placeOffset[0],
-						y: tile.y + tile.x / 2 + placeOffset[1]
+						y: tile.y + tile.x / 2 + placeOffset[1],
+						vConnect: new Set(),
+						eConnect: new Set(),
 					}
 					vSlots.push(slot)
 					tile.vSlot[i] = slot
@@ -244,7 +248,9 @@ function restart(playerNumber = 2, clear = false) {
 						tile: tile,
 						rotate: i / 6,
 						x: tile.x * square3 + placeOffset[0],
-						y: tile.y + tile.x / 2 + placeOffset[1]
+						y: tile.y + tile.x / 2 + placeOffset[1],
+						vConnect: new Set(),
+						eConnect: new Set(),
 					}
 					eSlots.push(slot)
 					tile.eSlot[i] = slot
@@ -254,6 +260,18 @@ function restart(playerNumber = 2, clear = false) {
 						matchTile.eSlot[match[2]] = slot
 					}
 				}
+			}
+			// connect slot 2 slot
+			for(let i = 0;i < 6;i++) {
+				tile.vSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
+				tile.vSlot[i].vConnect.add(tile.vSlot[(i + 5) % 6])
+				tile.eSlot[i].eConnect.add(tile.eSlot[(i + 1) % 6])
+				tile.eSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
+				
+				tile.vSlot[i].eConnect.add(tile.eSlot[(i) % 6])
+				tile.vSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
+				tile.eSlot[i].eConnect.add(tile.vSlot[(i) % 6])
+				tile.eSlot[i].eConnect.add(tile.vSlot[(i + 1) % 6])
 			}
 		}
 
@@ -265,12 +283,13 @@ function restart(playerNumber = 2, clear = false) {
 		robberToken.tile = tiles[0]
 
 		stage = stageInit
-		if(true) {
+		if(false) {
 			stage = stagePlay
 			curPlayer = 0
-			// addToken(players[0], board[3][2].vSlot[2], settlement)
+			addToken(players[0], board[3][2].vSlot[2], settlement)
+			addToken(players[1], board[4][3].vSlot[2], settlement)
 			players[0].res = [0, 10, 10, 10, 10, 10];
-			players[1].res = [0, 10, 10, 10, 10, 10];
+			players[1].res = [0, 2, 2, 2, 2, 2];
 		}
 		btnNext.disabled = false
 		next()
@@ -293,6 +312,7 @@ function addToken(player, slot, type) {
 		slot.token = token
 		tokens.push(token)
 		player.road--
+		player.allRoad++
 	} else if(type == city || type == settlement) {
 		let token = {
 			type: type,
@@ -446,7 +466,7 @@ function confirmBuy() {
 			if(res) {
 				player.res[res]++
 				from.res[res]--
-				addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color)
+				addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color, 'purple')
 			}
 
 			addToken(player, token.tile, token.type)
@@ -480,9 +500,6 @@ function rob() {
 }
 // rob if resource more than 7
 function rob2() {
-	curToken.push({
-		type: robber2
-	})
 	for(let player of players) {
 		let sum = 0
 		for(let num of player.res) {
@@ -496,6 +513,9 @@ function rob2() {
 		}
 	}
 	if(robPlayers.length > 0) {
+		curToken.push({
+			type: robber2
+		})
 		saveCurPlayer = curPlayer
 		curPlayer = robPlayers[0].player.id
 		addHighlight()
@@ -508,6 +528,7 @@ function useDevelop(i) {
 	switch(dev.type) {
 		case soldier: {
 			rob()
+			player.allSoldier++
 			break;
 		}
 		case yearOfPlenty: {
@@ -548,7 +569,7 @@ function clickResource(res) {
 		if(token.type == yearOfPlenty) {
 			player.res[res]++
 			curToken.shift()
-			addLog(player.color + ' produced 1 ' + resourceNames[res])
+			addLog(player.color + ' produced 1 ' + resourceNames[res], 'green')
 			drawRes()
 			drawAll()
 		} else if(token.type == monopoly) {
@@ -560,7 +581,7 @@ function clickResource(res) {
 				}
 			}
 			player.res[res] += sum
-			addLog(player.color + ' got ' + sum + ' ' + resourceNames[res] + ' by monopoly')
+			addLog(player.color + ' got ' + sum + ' ' + resourceNames[res] + ' by monopoly', 'purple')
 			curToken.shift()
 			drawRes()
 			drawAll()
@@ -673,7 +694,6 @@ function next() {
 		}
 		addHighlight()
 	} else {
-		addLog('---------------------')
 		removeHighlight()
 		curPlayer++
 		if(curPlayer >= players.length) {
@@ -728,7 +748,7 @@ function next() {
 					}
 				}
 				if(player.resAddAll > 0) {
-					addLog(player.color + ' produced ' + resStr)
+					addLog(player.color + ' produced ' + resStr, 'green')
 				}
 			}
 		}
@@ -753,8 +773,17 @@ function next() {
 	// checkFinish()
 }
 
-function addLog(log) {
-	labelHistory.innerHTML += log + "\r\n"
+function addLog(log, color) {
+	let str = ''
+	if(color) {
+		str += '<font color="' + color + '">'
+	}
+	str += log + "<br>"
+	
+	if(color) {
+		str += '</font>'
+	}
+	labelHistory.innerHTML += str
 	labelHistory.scrollTop = labelHistory.scrollHeight
 }
 
@@ -802,9 +831,13 @@ function drawRes() {
 	for(let res = 1;res < 6;res++) {
 		tableRes.rows[1].cells[res - 1].innerHTML = player.res[res]
 	}
-	tableRes.rows[1].cells[5].innerHTML = player.score
+	for(let [index, p] of players.entries()) {
+		tableScore.rows[index + 1].cells[1].innerHTML = p.allSoldier
+		tableScore.rows[index + 1].cells[2].innerHTML = p.allRoad
+		tableScore.rows[index + 1].cells[3].innerHTML = p.score
+	}
 	if(player.score >= 10) {
-		addLog(player.color + ' has won the game')
+		addLog(player.color + ' has won the game', 'red')
 	}
 	labelRoad.innerHTML = player.road
 	labelSettlement.innerHTML = player.settlement
@@ -1010,6 +1043,49 @@ function draw(file, x, y, w = grid, h = grid, rotate = 0) {
 	}
 }
 
+// check if this slot can put road
+function canRoad(slot) {
+	if(slot.token) {
+		return false
+	}
+	for(let vc of slot.vConnect) {
+		if(vc.token && vc.token.player.id == curPlayer) {
+			return true
+		}
+	}
+	for(let ec of slot.eConnect) {
+		if(ec.token && ec.token.player.id == curPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
+// check if this slot can put settlement or city
+function canSettle(slot, token) {
+	if(token.type == city) {
+		return slot.token && slot.token.type == settlement
+	}
+	if(slot.token) {
+		return false
+	}
+	// no adjacent settlement is allowed
+	for(let vc of slot.vConnect) {
+		if(vc.token) {
+			return false
+		}
+	}
+	if(stage != stagePlay) {
+		return true
+	}
+	for(let ec of slot.eConnect) {
+		if(ec.token && ec.token.player.id == curPlayer) {
+			return true
+		}
+	}
+	return false
+}
+
 let dragX = null, dragY
 function touchstart(ex, ey) {
 	let token = curToken[0]
@@ -1018,7 +1094,7 @@ function touchstart(ex, ey) {
 			for(let slot of eSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04 && !slot.token) {
+				if(dx * dx + dy * dy < 0.04 && canRoad(slot)) {
 					token.slot = slot
 					btnConfirmBuy.disabled = false
 					break
@@ -1028,7 +1104,7 @@ function touchstart(ex, ey) {
 			for(let slot of vSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04 && (!slot.token && token.type == settlement || slot.token && slot.token.type == settlement && token.type == city)) {
+				if(dx * dx + dy * dy < 0.04 && canSettle(slot, token)) {
 					token.slot = slot
 					btnConfirmBuy.disabled = false
 					break
