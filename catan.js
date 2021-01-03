@@ -93,8 +93,8 @@ function restart(playerNumber = 2, clear = false) {
 	if(clear) {
 		game = undefined
 	}
-	scores.initScore()
-	lastTile = undefined
+	// scores.initScore()
+	// lastTile = undefined
 	labelDice.innerHTML = '?'
 	
 	curToken = []
@@ -158,6 +158,7 @@ function restart(playerNumber = 2, clear = false) {
 		curPlayer = game.curPlayer
 		stage = game.stage
 		labelHistory.innerHTML = game.log
+		labelHistory.scrollTop = labelHistory.scrollHeight
 	} else {
 		players = []
 		for(let i = 0;i < playerNumber;i++) {
@@ -239,8 +240,18 @@ function restart(playerNumber = 2, clear = false) {
 			players[1].res = [0, 10, 10, 10, 10, 10];
 		}
 		btnNext.disabled = false
+		labelHistory.innerHTML = ''
 	}
-
+	if(players.length >= 3) {
+		tableScore.rows[3].style.display=""
+	} else {
+		tableScore.rows[3].style.display="none"
+	}
+	if(players.length >= 4) {
+		tableScore.rows[4].style.display=""
+	} else {
+		tableScore.rows[4].style.display="none"
+	}
 	next()
 	updatePlayerDisplay()
 	drawRes()
@@ -507,14 +518,6 @@ function confirmBuy() {
 			}
 		} else if(token.type == robber && token.tile) {
 			let player = players[curPlayer]
-			let from = players[1 - curPlayer]	// TODO steal from adjacent settlement or city
-			let res = getRandomResource(from.res)
-			if(res) {
-				player.res[res]++
-				from.res[res]--
-				addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color, 'purple')
-			}
-
 			addToken(player, token.tile, token.type)
 			drawRes()
 			drawAll()
@@ -542,6 +545,9 @@ function getRandomResource(resArr) {
 function rob() {
 	curToken.push({
 		type: robber
+	})
+	curToken.push({
+		type: robber3
 	})
 }
 // rob if resource more than 7
@@ -657,6 +663,41 @@ function clickResource(res) {
 				drawAll()
 			}
 		}
+	}
+}
+
+function clickPlayer(id) {
+	let token = curToken[0]
+	if(token && token.type == robber3) {
+		if(id == curPlayer) {
+			return
+		}
+		let isNear = false		// check if there is a settlement of this player that is near the robber
+		for(let slot of robberToken.tile.vSlot) {
+			if(slot.token && slot.token.player.id == id) {
+				isNear = true
+				break
+			}
+		}
+		if(!isNear) {
+			return
+		}
+		let player = players[curPlayer]
+		let from = players[id]	// TODO steal from adjacent settlement or city
+		let res = getRandomResource(from.res)
+		if(res) {
+			player.res[res]++
+			from.res[res]--
+			addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color, 'purple')
+		} else {
+			addLog(player.color + ' stole nothing from ' + from.color, 'purple')
+		}
+		curToken.shift()
+		drawAll()
+		drawRes()
+		btnNext.disabled = false
+		btnConfirmBuy.disabled = true
+		btnCancelBuy.disabled = true
 	}
 }
 
@@ -958,7 +999,7 @@ function drawAll(c) {
 			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/10)
 		} else if(token.type == city || token.type == settlement) {
 			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/4)
-		} else if(token.type == robber || token.type == robber2) {
+		} else if(token.type == robber || token.type == robber2 || token.type == robber3) {
 			draw('robber', tokenInitPosX, tokenInitPos.y, grid/4, grid/2)
 		} else if(token.type == yearOfPlenty) {
 			draw('dev1', tokenInitPosX, tokenInitPos.y, grid/3, grid/2)
