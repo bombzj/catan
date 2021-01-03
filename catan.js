@@ -1,6 +1,6 @@
 
-let ctx, grid = 100, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
-let offsetX = 40, offsetY = -160
+let ctx, grid = 110, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
+let offsetX = 15, offsetY = -190
 let touchX, touchY, devStack, tiles
 let players
 let curPlayer
@@ -17,7 +17,7 @@ let maxArmyPlayer, maxRoadPlayer
 
 function init() {
 	btnDelete.disabled = true
-	// scores.initTileType()
+
 	ctx = canvas.getContext("2d")
 	let files = []
 	for(let [index, item] of tileTypes.entries()) {
@@ -88,16 +88,17 @@ function init() {
 	restart()
 }
 
-function restart(playerNumber = 2, clear = false) {
+function restart(playerNumber = 2, clear = false, test = false) {
 	let game = games[gameId]
 	if(clear) {
 		game = undefined
 	}
-	// scores.initScore()
-	// lastTile = undefined
+
 	labelDice.innerHTML = '?'
 	
 	curToken = []
+	maxArmyPlayer = undefined
+	maxRoadPlayer = undefined
 
 	if(game) {
 		players = game.players.map(item => {
@@ -124,7 +125,7 @@ function restart(playerNumber = 2, clear = false) {
 				type : tileTypes[item.type],
 				number: item.number,
 			}
-			// scores.addTile(tile)
+
 			tiles.push(tile)
 		}
 		initTileData()
@@ -157,6 +158,10 @@ function restart(playerNumber = 2, clear = false) {
 		}
 		curPlayer = game.curPlayer
 		stage = game.stage
+		for(let player of players) {
+			checkMaxArmy(player, false)
+			checkMaxRoad(player, false)
+		}
 		labelHistory.innerHTML = game.log
 		labelHistory.scrollTop = labelHistory.scrollHeight
 	} else {
@@ -178,12 +183,6 @@ function restart(playerNumber = 2, clear = false) {
 				},)
 		}
 
-		// scores.addTile(initTile)
-		// scores.addTile(initTile2)
-
-		maxArmyPlayer = undefined
-		maxRoadPlayer = undefined
-		tileStack = []
 		
 		let start
 		let tileIds = []
@@ -231,7 +230,7 @@ function restart(playerNumber = 2, clear = false) {
 		robberToken.tile = tiles[0]
 
 		stage = stageInit
-		if(false) {
+		if(test) {
 			stage = stagePlay
 			curPlayer = 0
 			addToken(players[0], board[3][2].vSlot[2], settlement)
@@ -252,7 +251,7 @@ function restart(playerNumber = 2, clear = false) {
 	} else {
 		tableScore.rows[4].style.display="none"
 	}
-	next()
+	next(false)
 	updatePlayerDisplay()
 	drawRes()
 	drawAll()
@@ -328,8 +327,8 @@ function initTileData() {
 			
 			tile.vSlot[i].eConnect.add(tile.eSlot[(i) % 6])
 			tile.vSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
-			tile.eSlot[i].eConnect.add(tile.vSlot[(i) % 6])
-			tile.eSlot[i].eConnect.add(tile.vSlot[(i + 1) % 6])
+			tile.eSlot[i].vConnect.add(tile.vSlot[(i) % 6])
+			tile.eSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
 		}
 	}
 
@@ -362,12 +361,7 @@ function addToken(player, slot, type) {
 		player.road--
 		player.allRoad = getRoadLength(player)
 		addLog(player.color + ' built a road', 'brown')
-		if(player.allRoad >= 5) {
-			if(!maxRoadPlayer || player.allRoad > maxRoadPlayer.allRoad) {
-				maxRoadPlayer = player
-				addLog(player.color + ' got 2 points of Longest Road', 'brown')
-			}
-		}
+		checkMaxRoad(player)
 	} else if(type == city || type == settlement) {
 		let token = {
 			type: type,
@@ -454,12 +448,6 @@ function buyDev() {
 }
 
 
-function checkFinish() {
-	if(tileStack.length == 0) {
-		scores.checkFinalToken()
-	}
-}
-
 function shuffle(arr) {
 	const len = arr.length
 	if(len < 2) {
@@ -519,6 +507,20 @@ function confirmBuy() {
 		} else if(token.type == robber && token.tile) {
 			let player = players[curPlayer]
 			addToken(player, token.tile, token.type)
+			// check if there's anyone to rob
+			let doRob = false
+			for(let slot of robberToken.tile.vSlot) {
+				if(slot.token && slot.token.player.id != curPlayer) {
+					doRob = true
+					break
+				}
+			}
+			if(doRob) {
+				curToken.push({
+					type: robber3
+				})
+			}
+
 			drawRes()
 			drawAll()
 			btnNext.disabled = false
@@ -546,12 +548,10 @@ function rob() {
 	curToken.push({
 		type: robber
 	})
-	curToken.push({
-		type: robber3
-	})
 }
 // rob if resource more than 7
 function rob2() {
+	// check if anyone needs to drop a half
 	for(let player of players) {
 		let sum = 0
 		for(let num of player.res) {
@@ -574,6 +574,27 @@ function rob2() {
 	}
 }
 
+function checkMaxArmy(player, log = false) {
+	if(player.allSoldier >= 3) {
+		if(!maxArmyPlayer || player.allSoldier > maxArmyPlayer.allSoldier) {
+			maxArmyPlayer = player
+			if(log) {
+				addLog(player.color + ' got 2 points of Largest Army', 'brown')
+			}
+		}
+	}
+}
+function checkMaxRoad(player, log = false) {
+	if(player.allRoad >= 5) {
+		if(!maxRoadPlayer || player.allRoad > maxRoadPlayer.allRoad) {
+			maxRoadPlayer = player
+			if(log) {
+				addLog(player.color + ' got 2 points of Longest Road', 'brown')
+			}
+		}
+	}
+}
+
 function useDevelop(i) {
 	let player = players[curPlayer]
 	let devId = player.develop[i]
@@ -582,12 +603,7 @@ function useDevelop(i) {
 		case soldier: {
 			rob()
 			player.allSoldier++
-			if(player.allSoldier >= 3) {
-				if(!maxArmyPlayer || player.allSoldier > maxArmyPlayer.allSoldier) {
-					maxArmyPlayer = player
-					addLog(player.color + ' got 2 points of Largest Army', 'brown')
-				}
-			}
+			checkMaxArmy(player)
 			break;
 		}
 		case yearOfPlenty: {
@@ -749,7 +765,7 @@ function addRoadBuildingTokens() {
 	}
 }
 
-function next(manual) {
+function next(needSave = true) {
 	if(curToken[0]) {
 		return
 	}
@@ -761,7 +777,9 @@ function next(manual) {
 		updatePlayerDisplay()
 		addInitialTokens()
 	} else if(stage == stageSettle1) {
-		saveGame()
+		if(needSave) {
+			saveGame()
+		}
 		removeHighlight()
 		curPlayer++
 		if(curPlayer >= players.length) {
@@ -780,7 +798,9 @@ function next(manual) {
 		updatePlayerDisplay()
 		addInitialTokens()
 	} else if(stage == stageSettle2) {
-		saveGame()
+		if(needSave) {
+			saveGame()
+		}
 		removeHighlight()
 		curPlayer--
 		if(curPlayer < 0) {
@@ -797,7 +817,9 @@ function next(manual) {
 			player.develop = player.develop.concat(player.develop2)
 			player.develop2 = []
 		}
-		saveGame()
+		if(needSave) {
+			saveGame()
+		}
 		removeHighlight()
 		curPlayer++
 		if(curPlayer >= players.length) {
@@ -858,18 +880,6 @@ function next(manual) {
 	}
 	drawRes()
 	drawAll()
-	// if(lastTile) {
-	// 	scores.checkToken()
-	// 	for(let i = 0;i < players.length;i++) {
-	// 		document.getElementById("score" + i).innerHTML = players[i].score
-	// 	}
-	// 	lastTile = undefined
-	// 	curPlayer = (curPlayer + 1) % players.length
-	// 	btnNext.disabled = true
-	// 	drawAll()
-	// 	saveGame()
-	// }
-	// checkFinish()
 }
 
 function addLog(log, color) {
@@ -946,13 +956,13 @@ function drawRes() {
 }
 
 const tokenInitPos = {
-	x: 570,
+	x: 580,
 	y: 30,
-	interval: 30,
+	interval: 35,
 }
 const devDrawPos = {
-	x: 5.2,
-	y: 7.6,
+	x: 5.0,
+	y: 7.5,
 	interval: 0.65,
 	width: 1 / 1.5,
 	height: 1
@@ -966,7 +976,7 @@ function drawAll(c) {
 		draw(tile.type.id, grid * (tile.x) * square3 + offsetX, grid * (tile.y + tile.x / 2) + offsetY, grid / square3, grid)
 		if(tile.number) {
 			draw('num' + tile.number, grid * (tile.x) * square3 + offsetX, grid * (tile.y + tile.x / 2) + offsetY, 
-					grid/3, grid/3)
+					grid/2.5, grid/2.5)
 		}
 		// if(tile.tokens) {
 		// 	let place = tile.type.place
@@ -1032,9 +1042,9 @@ function drawAll(c) {
 
 function drawToken(token) {
 	if(token.type == road) {
-		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/4, grid/10, token.slot.rotate)
+		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/3, grid/10, token.slot.rotate)
 	} else {
-		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/6, grid/6)
+		draw(token.player.color + token.type, grid * token.slot.x + offsetX, grid * token.slot.y + offsetY, grid/5, grid/5)
 	}
 }
 
