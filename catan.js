@@ -322,11 +322,11 @@ function initTileData() {
 		for(let i = 0;i < 6;i++) {
 			tile.vSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
 			tile.vSlot[i].vConnect.add(tile.vSlot[(i + 5) % 6])
-			tile.eSlot[i].eConnect.add(tile.eSlot[(i + 1) % 6])
-			tile.eSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
-			
 			tile.vSlot[i].eConnect.add(tile.eSlot[(i) % 6])
 			tile.vSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
+
+			// tile.eSlot[i].eConnect.add(tile.eSlot[(i + 1) % 6])
+			// tile.eSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
 			tile.eSlot[i].vConnect.add(tile.vSlot[(i) % 6])
 			tile.eSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
 		}
@@ -1079,13 +1079,17 @@ function canRoad(slot) {
 		return false
 	}
 	for(let vc of slot.vConnect) {
-		if(vc.token && vc.token.player.id == curPlayer) {
-			return true
-		}
-	}
-	for(let ec of slot.eConnect) {
-		if(ec.token && ec.token.player.id == curPlayer) {
-			return true
+		if(vc.token) {
+			if(vc.token.player.id == curPlayer) {
+				return true
+			}
+		} else {
+			// if the vertex is empty, check roads that connect to it
+			for(let ec of vc.eConnect) {
+				if(ec.token && ec.token.player.id == curPlayer) {
+					return true
+				}
+			}
 		}
 	}
 	return false
