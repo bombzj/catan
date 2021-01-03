@@ -16,6 +16,7 @@ const settlement = 2
 const city = 3
 const develop = 4
 const robber = 10
+const robber2 = 11	// drop a half of cards
 
 const stageInit = 0
 const stageSettle1 = 1

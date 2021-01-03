@@ -10,6 +10,7 @@ let tokens
 let curToken = []
 let stage
 let robberToken = {}
+let robPlayers = [], saveCurPlayer
 
 
 function init() {
@@ -479,7 +480,26 @@ function rob() {
 }
 // rob if resource more than 7
 function rob2() {
-
+	curToken.push({
+		type: robber2
+	})
+	for(let player of players) {
+		let sum = 0
+		for(let num of player.res) {
+			sum += num
+		}
+		if(sum > 7) {
+			robPlayers.push({
+				player: player,
+				count: sum >> 1
+			})
+		}
+	}
+	if(robPlayers.length > 0) {
+		saveCurPlayer = curPlayer
+		curPlayer = robPlayers[0].player.id
+		addHighlight()
+	}
 }
 
 function useDevelop(i) {
@@ -544,6 +564,24 @@ function clickResource(res) {
 			curToken.shift()
 			drawRes()
 			drawAll()
+		} else if(token.type == robber2) {
+			if(player.res[res] > 0) {
+				player.res[res]--
+				let robPlayer = robPlayers[0]
+				robPlayer.count--
+				if(robPlayer.count <= 0) {
+					robPlayers.shift()
+					if(robPlayers.length > 0) {
+						curPlayer = robPlayers[0].player.id
+					} else {
+						curPlayer = saveCurPlayer
+						curToken.shift()
+					}
+					addHighlight()
+				}
+				drawRes()
+				drawAll()
+			}
 		}
 	}
 }
@@ -829,7 +867,7 @@ function drawAll(c) {
 			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/10)
 		} else if(token.type == city || token.type == settlement) {
 			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/4)
-		} else if(token.type == robber) {
+		} else if(token.type == robber || token.type == robber2) {
 			draw('robber', tokenInitPosX, tokenInitPos.y, grid/4, grid/2)
 		} else if(token.type == yearOfPlenty) {
 			draw('dev1', tokenInitPosX, tokenInitPos.y, grid/3, grid/2)
