@@ -6,8 +6,8 @@
 <meta name="keywords" content="Parking,Game"/>
 <title>Catan</title>
 <script src="score.js?i=1"></script>
-<script src="data.js?i=4"></script>
-<script src="catan.js?i=3"></script>
+<script src="data.js?i=5"></script>
+<script src="catan.js?i=4"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
 <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 <script src="https://libs.baidu.com/jqueryui/1.8.22/jquery-ui.min.js"></script>
@@ -60,11 +60,11 @@
         <tr><td class="score">
             <table id="tableRes" border="1" style="border-collapse: collapse" cellpadding="2">
                 <tr class="resImg">
-                    <td><img src="res/res1.png"></td>
-                    <td><img src="res/res2.png"></td>
-                    <td><img src="res/res3.png"></td>
-                    <td><img src="res/res4.png"></td>
-                    <td><img src="res/res5.png"></td>
+                    <td><img src="res/res1.png" onclick="javascript:clickResource(1)"></td>
+                    <td><img src="res/res2.png" onclick="javascript:clickResource(2)"></td>
+                    <td><img src="res/res3.png" onclick="javascript:clickResource(3)"></td>
+                    <td><img src="res/res4.png" onclick="javascript:clickResource(4)"></td>
+                    <td><img src="res/res5.png" onclick="javascript:clickResource(5)"></td>
                     <td>score</td>
                 </tr>
                 <tr class="cssPlayer">
@@ -78,9 +78,10 @@
             </table>
         </td></tr>
         <tr><td>
-            <input id="btnRoad" type="image" src="res/blue1.png" onclick="javascript:buyRoad()"> <span id="labelRoad"></span>
-            <input id="btnSettlement" type="image" src="res/blue2.png" onclick="javascript:buySettlement()"> <span id="labelSettlement"></span>
-            <input id="btnCity" type="image" src="res/blue3.png" onclick="javascript:buyCity()"> <span id="labelCity"></span>
+            <input id="btnRoad" type="image" src="res/blue1.png" onclick="javascript:buyRoad()" width="25px"> <span id="labelRoad"></span>
+            <input id="btnSettlement" type="image" src="res/blue2.png" onclick="javascript:buySettlement()" width="25px"> <span id="labelSettlement"></span>
+            <input id="btnCity" type="image" src="res/blue3.png" onclick="javascript:buyCity()" width="25px"> <span id="labelCity"></span>
+            <input id="btnDev" type="image" src="res/dev.png" onclick="javascript:buyDev()" width="30px"> <span id="labelDev"></span>
         </td></tr>
         <tr style="display:none"><td>
             <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>

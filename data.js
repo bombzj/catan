@@ -14,6 +14,7 @@ const ore = 5
 const road = 1
 const settlement = 2
 const city = 3
+const develop = 4
 const robber = 10
 
 const stageInit = 0
@@ -21,12 +22,66 @@ const stageSettle1 = 1
 const stageSettle2 = 2
 const stagePlay = 3
 
+const soldier = 20
+const yearOfPlenty = 21
+const roadBuilding = 22
+const monopoly = 23
+const victoryPoint = 30
+
 
 const allColors = [
 	'blue', 'red', 'green', 'yellow', 'white', 'brown'
 ]
 const resourceNames = [
 	'', 'wool', 'grain', 'wood', 'brick', 'ore'
+]
+
+const devTypes = [
+	{
+		type: soldier,
+		count: 20,
+		name: 'soldier',
+	},
+	{
+		type: yearOfPlenty,
+		count: 3,
+		name: 'year of plenty',
+	},
+	{
+		type: roadBuilding,
+		count: 3,
+		name: 'road building',
+	},
+	{
+		type: monopoly,
+		count: 3,
+		name: 'monopoly',
+	},
+	{
+		type: victoryPoint,
+		count: 1,
+		name: 'library',
+	},
+	{
+		type: victoryPoint,
+		count: 1,
+		name: 'market',
+	},
+	{
+		type: victoryPoint,
+		count: 1,
+		name: 'governor\'s house',
+	},
+	{
+		type: victoryPoint,
+		count: 1,
+		name: 'chapel',
+	},
+	{
+		type: victoryPoint,
+		count: 1,
+		name: 'university of catan',
+	},
 ]
 
 const tileTypes = [
@@ -66,6 +121,7 @@ let tokenCost = []
 tokenCost[road] = [0, 0, 0, 1, 1, 0]
 tokenCost[settlement] = [0, 1, 1, 1, 1, 0]
 tokenCost[city] = [0, 0, 2, 0, 0, 3]
+tokenCost[develop] = [0, 1, 1, 0, 0, 1]
 
 const square3 = Math.sqrt(3)/2
 const hexVertexOffset = [

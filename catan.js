@@ -1,16 +1,16 @@
 
 let ctx, grid = 100, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
-let offsetX, offsetY
-let touchX, touchY, tileStack, tiles
+let offsetX = 40, offsetY = -160
+let touchX, touchY, devStack, tiles
 let players
 let curPlayer
 let curTile4Token
 let lastTile	// token can place here only
 let tokens
-let curToken
+let curToken = []
 let stage
-let phase, phaseTokenType = [settlement, road]
 let robberToken = {}
+
 
 function init() {
 	btnDelete.disabled = true
@@ -19,6 +19,10 @@ function init() {
 	let files = []
 	for(let [index, item] of tileTypes.entries()) {
 		files.push(index)
+		item.id = index
+	}
+	for(let [index, item] of devTypes.entries()) {
+		files.push('dev' + index)
 		item.id = index
 	}
 	for(let num = 2;num <=12;num++) {
@@ -40,8 +44,8 @@ function init() {
 	});
 
 	
-	offsetX = -grid * (boardWidth / 2 - 2)
-	offsetY = -grid * (boardWidth / 2 - 3)
+	// offsetX = -grid * (boardWidth / 2 - 2)
+	// offsetY = -grid * (boardWidth / 2 - 3)
 
 	canvas.addEventListener("mousedown", function (event) {
 		if(!touchable) {
@@ -88,6 +92,7 @@ function restart(playerNumber = 2, clear = false) {
 	}
 	scores.initScore()
 	lastTile = undefined
+	labelDice.innerHTML = '?'
 
 	if(game) {
 		players = game.players.map(item => {
@@ -148,8 +153,9 @@ function restart(playerNumber = 2, clear = false) {
 					settlement: 5,
 					city: 4,
 					score: 0,
-					// res: [0, 10, 10, 10, 10, 10],
-					res: [0, 0,0,0,0,0],
+					res: [0, 0, 0, 0, 0, 0],
+					develop: [],
+					develop2: [],	// got in current turn, cannot use
 					exchange: []	// 3:1 and then 2:1 for each resource
 				},)
 		}
@@ -171,9 +177,18 @@ function restart(playerNumber = 2, clear = false) {
 			}
 		}
 		shuffle(tileIds)
+		
 
 		let numberTags = [2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12]
 		shuffle(numberTags)
+
+		devStack = []
+		for(let dev of devTypes) {
+			for(let i = 0;i < dev.count;i++) {
+				devStack.push(dev)
+			}
+		}
+		shuffle(devStack)
 
 		board = []
 		tokens = []
@@ -245,24 +260,22 @@ function restart(playerNumber = 2, clear = false) {
 		for(let harbor of harbors) {
 			board[harbor[0]][harbor[1]].vSlot[harbor[2]].exchange = harbor[3]
 		}
-	
-		offsetX = 40 //-grid * (boardWidth / 2 - 2)
-		offsetY = -110 //-grid * (boardWidth / 2 - 3)
 
 		robberToken.tile = tiles[0]
 
 		stage = stageInit
 		if(true) {
-			// stage = stagePlay
-			// curPlayer = 0
+			stage = stagePlay
+			curPlayer = 0
 			// addToken(players[0], board[3][2].vSlot[2], settlement)
+			players[0].res = [0, 10, 10, 10, 10, 10];
+			players[1].res = [0, 10, 10, 10, 10, 10];
 		}
 		btnNext.disabled = false
 		next()
 	}
 
 
-	labelDice.innerHTML = '?'
 	drawRes()
 	drawAll()
 
@@ -306,11 +319,11 @@ function addToken(player, slot, type) {
 	} else if(type == robber) {
 		robberToken.tile = slot
 	}
-	curToken = undefined
+	curToken.shift()
 }
 
 function buyToken(type) {
-	if(curToken) {
+	if(curToken[0]) {
 		return false
 	}
 	let player = players[curPlayer]
@@ -323,6 +336,9 @@ function buyToken(type) {
 	if(type == settlement && player.settlement <= 0) {
 		return false
 	}
+	if(type == develop && devStack.length == 0) {
+		return false
+	}
 	let cost = tokenCost[type]
 	for(let i = 1;i < 6;i++) {
 		if(player.res[i] < cost[i]) {
@@ -332,12 +348,17 @@ function buyToken(type) {
 	for(let i = 1;i < 6;i++) {
 		player.res[i] -= cost[i]
 	}
-	curToken = {
-		player: player,
-		type: type
+	if(type == develop) {
+		let dev = devStack.pop()
+		player.develop2.push(dev)
+	} else {
+		curToken.push( {
+			player: player,
+			type: type
+		})
+		btnNext.disabled = true
+		btnCancelBuy.disabled = false
 	}
-	btnNext.disabled = true
-	btnCancelBuy.disabled = false
 	drawRes()
 	drawAll()
 }
@@ -350,6 +371,10 @@ function buySettlement() {
 function buyCity() {
 	buyToken(city)
 }
+function buyDev() {
+	buyToken(develop)
+}
+
 
 function checkFinish() {
 	if(tileStack.length == 0) {
@@ -376,14 +401,15 @@ function shuffle(arr) {
 }
 
 function cancelBuy() {
-	if(curToken && stage == stagePlay) {
-		if(curToken.type == road || curToken.type == city || curToken.type == settlement) {
+	let token = curToken[0]
+	if(token && stage == stagePlay) {
+		if(token.type == road || token.type == city || token.type == settlement) {
 			let player = players[curPlayer]
-			let cost = tokenCost[curToken.type]
+			let cost = tokenCost[token.type]
 			for(let i = 1;i < 6;i++) {
 				player.res[i] += cost[i]
 			}
-			curToken = undefined
+			curToken.shift()
 			btnCancelBuy.disabled = true
 			btnConfirmBuy.disabled = true
 			btnNext .disabled = false
@@ -394,32 +420,131 @@ function cancelBuy() {
 }
 
 function confirmBuy() {
-	if(curToken) {
-		if(curToken.slot) {
-			addToken(curToken.player, curToken.slot, curToken.type)
-			btnNext.disabled = false
+	let token = curToken[0]
+	if(token) {
+		if(token.slot) {
+			addToken(token.player, token.slot, token.type)
 			btnConfirmBuy.disabled = true
 			btnCancelBuy.disabled = true
-			if(stage == stageSettle1 || stage == stageSettle2) {
-				next()
-			} else {
+			if(curToken[0]) {
 				drawRes()
 				drawAll()
+			} else {
+				btnNext.disabled = false
+				if(stage == stageSettle1 || stage == stageSettle2) {
+					next()
+				} else {
+					drawRes()
+					drawAll()
+				}
 			}
-		} else if(curToken.type == robber && curToken.tile) {
+		} else if(token.type == robber && token.tile) {
+			let player = players[curPlayer]
+			let from = players[1 - curPlayer]	// TODO steal from adjacent settlement or city
+			let res = getRandomResource(from.res)
+			if(res) {
+				player.res[res]++
+				from.res[res]--
+				addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color)
+			}
+
+			addToken(player, token.tile, token.type)
+			drawRes()
+			drawAll()
 			btnNext.disabled = false
 			btnConfirmBuy.disabled = true
 			btnCancelBuy.disabled = true
-			addToken(curToken.player, curToken.tile, curToken.type)
-			drawRes()
-			drawAll()
 		}
 	}
 }
+
+function getRandomResource(resArr) {
+	let arr = []
+	for(let [index, num] of resArr.entries()) {
+		for(let i = 0;i < num;i++) {
+			arr.push(index)
+		}
+	}
+	if(arr.length == 0) {
+		return 0
+	}
+	return arr[Math.floor(Math.random() * arr.length)]
+}
+
 // rob card, drop card, move robber
 function rob() {
-	curToken = {
+	curToken.push({
 		type: robber
+	})
+}
+// rob if resource more than 7
+function rob2() {
+
+}
+
+function useDevelop(i) {
+	let player = players[curPlayer]
+	let dev = player.develop[i]
+	switch(dev.type) {
+		case soldier: {
+			rob()
+			break;
+		}
+		case yearOfPlenty: {
+			curToken.push({
+				type: yearOfPlenty
+			})
+			curToken.push({
+				type: yearOfPlenty
+			})
+			break;
+		}
+		case roadBuilding: {
+			addRoadBuildingTokens()
+			break;
+		}
+		case monopoly: {
+			curToken.push({
+				type: monopoly
+			})
+			break;
+		}
+		case victoryPoint: {
+			player.score++
+			break;
+		}
+		default: {
+
+		}
+	}
+	player.develop.splice(i, 1)
+}
+
+// when action needs to choose a resource
+function clickResource(res) {
+	let player = players[curPlayer]
+	let token = curToken[0]
+	if(token) {
+		if(token.type == yearOfPlenty) {
+			player.res[res]++
+			curToken.shift()
+			addLog(player.color + ' produced 1 ' + resourceNames[res])
+			drawRes()
+			drawAll()
+		} else if(token.type == monopoly) {
+			let sum = 0
+			for(let [index, p] of players.entries()) {
+				if(curPlayer != index) {
+					sum += p.res[res]
+					p.res[res] = 0
+				}
+			}
+			player.res[res] += sum
+			addLog(player.color + ' got ' + sum + ' ' + resourceNames[res] + ' by monopoly')
+			curToken.shift()
+			drawRes()
+			drawAll()
+		}
 	}
 }
 
@@ -450,8 +575,29 @@ function updateExchangeRate() {
 	exchangeRate.innerHTML = rate + ':1'
 }
 
+// for game initial setup
+let initTokenType = [settlement, road]
+function addInitialTokens() {
+	for(let type of initTokenType) {
+		curToken.push({
+			player: players[curPlayer],
+			type: type
+		})
+	}
+}
+// for development card of road building
+let roadBuildingTokenType = [road, road]
+function addRoadBuildingTokens() {
+	for(let type of roadBuildingTokenType) {
+		curToken.push({
+			player: players[curPlayer],
+			type: type
+		})
+	}
+}
+
 function next() {
-	if(curToken) {
+	if(curToken[0]) {
 		return
 	}
 	if(stage == stageInit) {
@@ -459,62 +605,35 @@ function next() {
 		phase = 0
 		curPlayer = 0
 		addHighlight()
-		curToken = {
-			player: players[curPlayer],
-			type: phaseTokenType[0]
-		}
+		addInitialTokens()
 	} else if(stage == stageSettle1) {
-		phase++
-		if(phase < phaseTokenType.length) {
-			curToken = {
-				player: players[curPlayer],
-				type: phaseTokenType[phase]
-			}
-		} else {
-			removeHighlight()
-			curPlayer++
-			if(curPlayer >= players.length) {
-				stage = stageSettle2
-				// initial resource for each player
-				for(let tile of tiles) {
-					for(let slot of tile.vSlot) {
-						if(slot.token) {
-							let token = slot.token
-							token.player.res[tile.type.resource] += 1
-						}
+		removeHighlight()
+		curPlayer++
+		if(curPlayer >= players.length) {
+			stage = stageSettle2
+			// initial resource for each player
+			for(let tile of tiles) {
+				for(let slot of tile.vSlot) {
+					if(slot.token) {
+						let token = slot.token
+						token.player.res[tile.type.resource] += 1
 					}
 				}
-				curPlayer = players.length - 1
 			}
-			addHighlight()
-			phase = 0
-			curToken = {
-				player: players[curPlayer],
-				type: phaseTokenType[phase]
-			}
+			curPlayer = players.length - 1
 		}
+		addHighlight()
+		addInitialTokens()
 	} else if(stage == stageSettle2) {
-		phase++
-		if(phase < phaseTokenType.length) {
-			curToken = {
-				player: players[curPlayer],
-				type: phaseTokenType[phase]
-			}
+		removeHighlight()
+		curPlayer--
+		if(curPlayer < 0) {
+			stage = stagePlay
+			curPlayer = 0
 		} else {
-			removeHighlight()
-			curPlayer--
-			if(curPlayer < 0) {
-				stage = stagePlay
-				curPlayer = 0
-			} else {
-				phase = 0
-				curToken = {
-					player: players[curPlayer],
-					type: phaseTokenType[phase]
-				}
-			}
-			addHighlight()
+			addInitialTokens()
 		}
+		addHighlight()
 	} else {
 		addLog('---------------------')
 		removeHighlight()
@@ -522,6 +641,12 @@ function next() {
 		if(curPlayer >= players.length) {
 			curPlayer = 0
 		}
+		let player = players[curPlayer]
+		if(player.develop2.length > 0) {
+			player.develop = player.develop.concat(player.develop2)
+			player.develop2 = []
+		}
+
 		addHighlight()
 		let dice1 = Math.floor(Math.random() * 6) + 1
 		let dice2 = Math.floor(Math.random() * 6) + 1
@@ -529,6 +654,7 @@ function next() {
 		addLog('the dice roll is ' + dice)
 		labelDice.innerHTML = dice1 + "+" + dice2
 		if(dice == 7) {
+			rob2()
 			rob()
 		} else {
 			for(let player of players) {
@@ -570,7 +696,7 @@ function next() {
 		}
 		updateExchangeRate()
 	}
-	if(curToken) {
+	if(curToken[0]) {
 		btnNext.disabled = true
 	}
 	drawRes()
@@ -639,14 +765,27 @@ function drawRes() {
 		tableRes.rows[1].cells[res - 1].innerHTML = player.res[res]
 	}
 	tableRes.rows[1].cells[5].innerHTML = player.score
+	if(player.score >= 10) {
+		addLog(player.color + ' has won the game')
+	}
 	labelRoad.innerHTML = player.road
 	labelSettlement.innerHTML = player.settlement
 	labelCity.innerHTML = player.city
+
+	labelDev.innerHTML = devStack.length
 }
 
 const tokenInitPos = {
-	x: 550,
-	y: 30
+	x: 570,
+	y: 30,
+	interval: 30,
+}
+const devDrawPos = {
+	x: 5.2,
+	y: 7.6,
+	interval: 0.65,
+	width: 1 / 1.5,
+	height: 1
 }
 function drawAll(c) {
 	ctx.clearRect(0,0,canvas.width,canvas.height); 
@@ -676,8 +815,9 @@ function drawAll(c) {
 	for(let token of tokens) {
 		drawToken(token)
 	}
-	if(curToken) {
-		let token = curToken
+	// draw current token to use
+	let tokenInitPosX = tokenInitPos.x
+	for(let [index, token] of curToken.entries()) {
 		if(token.slot) {
 			drawToken(token)
 		}
@@ -686,16 +826,35 @@ function drawAll(c) {
 		}
 		
 		if(token.type == road) {
-			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/4, grid/10)
+			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/10)
 		} else if(token.type == city || token.type == settlement) {
-			draw(token.player.color + token.type, tokenInitPos.x, tokenInitPos.y, grid/3, grid/3)
+			draw(token.player.color + token.type, tokenInitPosX, tokenInitPos.y, grid/4, grid/4)
 		} else if(token.type == robber) {
-			draw('robber', tokenInitPos.x, tokenInitPos.y, grid/4, grid/2)
+			draw('robber', tokenInitPosX, tokenInitPos.y, grid/4, grid/2)
+		} else if(token.type == yearOfPlenty) {
+			draw('dev1', tokenInitPosX, tokenInitPos.y, grid/3, grid/2)
+		} else if(token.type == monopoly) {
+			draw('dev3', tokenInitPosX, tokenInitPos.y, grid/3, grid/2)
 		}
+		tokenInitPosX -= tokenInitPos.interval
 	}
 	if(robberToken) {
 		let tile = robberToken.tile
 		draw('robber', grid * tile.posX + offsetX, grid * tile.posY + offsetY, grid/4, grid/2)
+	}
+	let devX = devDrawPos.x
+	let player = players[curPlayer]
+	for(let dev of player.develop) {
+		draw('dev' + dev.id, grid * devX + offsetX, grid * devDrawPos.y + offsetY, devDrawPos.width * grid, devDrawPos.height * grid)
+		devX -= devDrawPos.interval
+	}
+	if(player.develop2.length > 0) {
+		ctx.globalAlpha = 0.5
+		for(let dev of player.develop2) {
+			draw('dev' + dev.id, grid * devX + offsetX, grid * devDrawPos.y + offsetY, devDrawPos.width * grid, devDrawPos.height * grid)
+			devX -= devDrawPos.interval
+		}
+		ctx.globalAlpha = 1
 	}
 	// drawBackup()
 }
@@ -815,39 +974,51 @@ function draw(file, x, y, w = grid, h = grid, rotate = 0) {
 
 let dragX = null, dragY
 function touchstart(ex, ey) {
-	if(curToken) {
-		if(curToken.type == road) {
+	let token = curToken[0]
+	if(token) {
+		if(token.type == road) {
 			for(let slot of eSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
 				if(dx * dx + dy * dy < 0.04 && !slot.token) {
-					curToken.slot = slot
+					token.slot = slot
 					btnConfirmBuy.disabled = false
 					break
 				}
 			}
-		} else if(curToken.type == settlement || curToken.type == city) {
+		} else if(token.type == settlement || token.type == city) {
 			for(let slot of vSlots) {
 				let dx = (ex - offsetX) / grid - slot.x
 				let dy = (ey - offsetY) / grid - slot.y
-				if(dx * dx + dy * dy < 0.04 && (!slot.token && curToken.type == settlement || slot.token && slot.token.type == settlement && curToken.type == city)) {
-					curToken.slot = slot
+				if(dx * dx + dy * dy < 0.04 && (!slot.token && token.type == settlement || slot.token && slot.token.type == settlement && token.type == city)) {
+					token.slot = slot
 					btnConfirmBuy.disabled = false
 					break
 				}
 			}
-		} else if(curToken.type == robber) {
+		} else if(token.type == robber) {
 			for(let tile of tiles) {
 				let dx = (ex - offsetX) / grid - tile.posX
 				let dy = (ey - offsetY) / grid - tile.posY
 				if(dx * dx + dy * dy < 0.1 && tile != robberToken.tile) {
-					curToken.tile = tile
+					token.tile = tile
 					btnConfirmBuy.disabled = false
 					break	
 				}
 			}
 		}
 		drawAll()
+	} else {
+		let dx = (ex - offsetX) / grid - devDrawPos.x + devDrawPos.width/2
+		let dy = (ey - offsetY) / grid - devDrawPos.y + devDrawPos.height/2
+		if(dy > 0 && dy < devDrawPos.height) {
+			let i = -Math.floor(dx / devDrawPos.interval)
+			if(i < players[curPlayer].develop.length) {
+				useDevelop(i)
+				drawRes()
+				drawAll()
+			}
+		}
 	}
 	if(1) return
 	let x = ex / grid
