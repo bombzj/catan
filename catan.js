@@ -7,10 +7,12 @@ let curPlayer
 let curTile4Token
 let lastTile	// token can place here only
 let tokens
-let curToken = []
+let curToken
 let stage
 let robberToken = {}
 let robPlayers = [], saveCurPlayer
+
+let maxArmyPlayer, maxRoadPlayer
 
 
 function init() {
@@ -55,12 +57,12 @@ function init() {
 	}, false);
 	canvas.addEventListener("mousemove", function (event) {
 		if(!touchable) {
-			touchmove(event.offsetX, event.offsetY)
+			// touchmove(event.offsetX, event.offsetY)
 		}
 	}, false);
 	window.addEventListener("mouseup", function (event) {
 		if(!touchable) {
-			touchend(event.offsetX, event.offsetY)
+			// touchend(event.offsetX, event.offsetY)
 		}
 	}, false);
 	
@@ -72,12 +74,12 @@ function init() {
 	}, false);
 	canvas.addEventListener("touchmove", function (event) {
 		event.preventDefault(); 
-		var bcr = event.target.getBoundingClientRect();
-		touchmove(event.touches[0].clientX - bcr.x, event.touches[0].clientY - bcr.y)
+		// var bcr = event.target.getBoundingClientRect();
+		// touchmove(event.touches[0].clientX - bcr.x, event.touches[0].clientY - bcr.y)
 	}, false);
 	window.addEventListener("touchend", function (event) {
-		var bcr = event.target.getBoundingClientRect();
-		touchend(event.changedTouches[0].clientX - bcr.x, event.changedTouches[0].clientY - bcr.y)
+		// var bcr = event.target.getBoundingClientRect();
+		// touchend(event.changedTouches[0].clientX - bcr.x, event.changedTouches[0].clientY - bcr.y)
 	}, false);
 
 	// document.styleSheets[0].insertRule('.cssPlayer {background-color: ' + cssColor[curPlayer] + '}', 0);
@@ -94,16 +96,24 @@ function restart(playerNumber = 2, clear = false) {
 	scores.initScore()
 	lastTile = undefined
 	labelDice.innerHTML = '?'
+	
+	curToken = []
 
 	if(game) {
 		players = game.players.map(item => {
 			return {
 				id : item.id,
 				color: allColors[item.id],
-				road: 15,
-				settlement: 5,
-				city: 4,
-				score: item.score
+				road: item.road,
+				settlement: item.settlement,
+				city: item.city,
+				allSoldier: item.allSoldier,
+				allRoad: item.allRoad,
+				score: item.score,
+				res: item.res,
+				develop: item.develop,
+				develop2: [],
+				exchange: []
 			}
 		})
 		tiles = []
@@ -111,11 +121,13 @@ function restart(playerNumber = 2, clear = false) {
 			let tile = {
 				x : item.x,
 				y : item.y,
-				type : tileTypes[item.type]
+				type : tileTypes[item.type],
+				number: item.number,
 			}
 			// scores.addTile(tile)
 			tiles.push(tile)
 		}
+		initTileData()
 
 		tokens = []
 		for(let item of game.tokens) {
@@ -124,37 +136,39 @@ function restart(playerNumber = 2, clear = false) {
 				continue
 			}
 			let player = players[item.player]
-			let group = tile.groups[item.index]
+			let slot
+			if(item.type == road) {
+				slot = tile.eSlot[item.index]
+			} else {
+				slot = tile.vSlot[item.index]
+			}
 			let token = {
+				type : item.type,
 				tile : tile,
-				index : item.index,
 				player : player,
-				type : item.type
+				slot : slot
 			}
+			slot.token = token
 			tokens.push(token)
-			if(!tile.tokens) {
-				tile.tokens = []
-			}
-			tile.tokens[item.index] = item.player
-
-			if(group) {
-				group.tokens.push(token)
-			}
-			player.token--
 		}
-		tileStack = game.stack
+		devStack = game.devStack
+		robberToken = {
+			tile: tiles[game.robberTile]
+		}
 		curPlayer = game.curPlayer
+		stage = game.stage
+		labelHistory.innerHTML = game.log
 	} else {
 		players = []
 		for(let i = 0;i < playerNumber;i++) {
 			players.push({
 					id : i,
 					color: allColors[i],
-					road: 15,
-					settlement: 5,
-					city: 4,
+					road: 15,	// road token left
+					settlement: 5,	// settlement token left
+					city: 4,		// city token left
 					allSoldier: 0,
-					allRoad: 0,
+					allRoad: 0,		// max length of road
 					score: 0,
 					res: [0, 0, 0, 0, 0, 0],
 					develop: [],
@@ -166,6 +180,8 @@ function restart(playerNumber = 2, clear = false) {
 		// scores.addTile(initTile)
 		// scores.addTile(initTile2)
 
+		maxArmyPlayer = undefined
+		maxRoadPlayer = undefined
 		tileStack = []
 		
 		let start
@@ -188,16 +204,12 @@ function restart(playerNumber = 2, clear = false) {
 		devStack = []
 		for(let dev of devTypes) {
 			for(let i = 0;i < dev.count;i++) {
-				devStack.push(dev)
+				devStack.push(dev.id)
 			}
 		}
 		shuffle(devStack)
 
-		board = []
 		tokens = []
-		for(let i = 0;i < 10;i++) {
-			board[i] = []
-		}
 
 		tileIds = [start].concat(tileIds)
 		tiles = []
@@ -206,79 +218,14 @@ function restart(playerNumber = 2, clear = false) {
 				x : tilePos[index][0],
 				y : tilePos[index][1],
 				type : tileTypes[item],
-				vSlot: [],
-				eSlot: [],
 			}
 			if(index > 0) {
 				tile.number = numberTags[index - 1]
 			}
 			tiles.push(tile)
-			board[tile.x][tile.y] = tile
 		}
 
-		// initial all slots of tiles
-		for(let tile of tiles) {
-			tile.posX = tile.x * square3
-			tile.posY = tile.y + tile.x / 2
-			for(let i = 0;i < 6;i++) {
-				if(!tile.vSlot[i]) {
-					let placeOffset = hexVertexOffset[i]
-					let slot = {
-						tile: tile,
-						x: tile.x * square3 + placeOffset[0],
-						y: tile.y + tile.x / 2 + placeOffset[1],
-						vConnect: new Set(),
-						eConnect: new Set(),
-					}
-					vSlots.push(slot)
-					tile.vSlot[i] = slot
-					let match = vMatch[i]
-					let matchTile1 = board[match[0] + tile.x][match[1] + tile.y]
-					if(matchTile1) {
-						matchTile1.vSlot[match[2]] = slot
-					}
-					let matchTile2 = board[match[3] + tile.x][match[4] + tile.y]
-					if(matchTile2) {
-						matchTile2.vSlot[match[5]] = slot
-					}
-				}
-				if(!tile.eSlot[i]) {
-					let placeOffset = hexEdgeOffset[i]
-					let slot = {
-						tile: tile,
-						rotate: i / 6,
-						x: tile.x * square3 + placeOffset[0],
-						y: tile.y + tile.x / 2 + placeOffset[1],
-						vConnect: new Set(),
-						eConnect: new Set(),
-					}
-					eSlots.push(slot)
-					tile.eSlot[i] = slot
-					let match = eMatch[i]
-					let matchTile = board[match[0] + tile.x][match[1] + tile.y]
-					if(matchTile) {
-						matchTile.eSlot[match[2]] = slot
-					}
-				}
-			}
-			// connect slot 2 slot
-			for(let i = 0;i < 6;i++) {
-				tile.vSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
-				tile.vSlot[i].vConnect.add(tile.vSlot[(i + 5) % 6])
-				tile.eSlot[i].eConnect.add(tile.eSlot[(i + 1) % 6])
-				tile.eSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
-				
-				tile.vSlot[i].eConnect.add(tile.eSlot[(i) % 6])
-				tile.vSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
-				tile.eSlot[i].eConnect.add(tile.vSlot[(i) % 6])
-				tile.eSlot[i].eConnect.add(tile.vSlot[(i + 1) % 6])
-			}
-		}
-
-		// for harbor exchange rate
-		for(let harbor of harbors) {
-			board[harbor[0]][harbor[1]].vSlot[harbor[2]].exchange = harbor[3]
-		}
+		initTileData()
 
 		robberToken.tile = tiles[0]
 
@@ -289,17 +236,107 @@ function restart(playerNumber = 2, clear = false) {
 			addToken(players[0], board[3][2].vSlot[2], settlement)
 			addToken(players[1], board[4][3].vSlot[2], settlement)
 			players[0].res = [0, 10, 10, 10, 10, 10];
-			players[1].res = [0, 2, 2, 2, 2, 2];
+			players[1].res = [0, 10, 10, 10, 10, 10];
 		}
 		btnNext.disabled = false
-		next()
 	}
 
-
+	next()
+	updatePlayerDisplay()
 	drawRes()
 	drawAll()
 
 	// checkFinish()
+}
+
+// initialize tile slots and connections
+function initTileData() {
+	board = []
+	for(let i = 0;i < 10;i++) {
+		board[i] = []
+	}
+	for(let [index, tile] of tiles.entries()) {
+		tile.id = index
+		tile.vSlot = []
+		tile.eSlot = []
+		board[tile.x][tile.y] = tile
+	}
+	// initial all slots of tiles
+	for(let tile of tiles) {
+		tile.posX = tile.x * square3
+		tile.posY = tile.y + tile.x / 2
+		for(let i = 0;i < 6;i++) {
+			if(!tile.vSlot[i]) {
+				let placeOffset = hexVertexOffset[i]
+				let slot = {
+					tile: tile,
+					index: i,
+					x: tile.x * square3 + placeOffset[0],
+					y: tile.y + tile.x / 2 + placeOffset[1],
+					vConnect: new Set(),
+					eConnect: new Set(),
+				}
+				vSlots.push(slot)
+				tile.vSlot[i] = slot
+				let match = vConnects[i]
+				let matchTile1 = board[match[0] + tile.x][match[1] + tile.y]
+				if(matchTile1) {
+					matchTile1.vSlot[match[2]] = slot
+				}
+				let matchTile2 = board[match[3] + tile.x][match[4] + tile.y]
+				if(matchTile2) {
+					matchTile2.vSlot[match[5]] = slot
+				}
+			}
+			if(!tile.eSlot[i]) {
+				let placeOffset = hexEdgeOffset[i]
+				let slot = {
+					tile: tile,
+					index: i,
+					rotate: i / 6,
+					x: tile.x * square3 + placeOffset[0],
+					y: tile.y + tile.x / 2 + placeOffset[1],
+					vConnect: new Set(),
+					eConnect: new Set(),
+				}
+				eSlots.push(slot)
+				tile.eSlot[i] = slot
+				let match = eConnects[i]
+				let matchTile = board[match[0] + tile.x][match[1] + tile.y]
+				if(matchTile) {
+					matchTile.eSlot[match[2]] = slot
+				}
+			}
+		}
+		// connect slot 2 slot
+		for(let i = 0;i < 6;i++) {
+			tile.vSlot[i].vConnect.add(tile.vSlot[(i + 1) % 6])
+			tile.vSlot[i].vConnect.add(tile.vSlot[(i + 5) % 6])
+			tile.eSlot[i].eConnect.add(tile.eSlot[(i + 1) % 6])
+			tile.eSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
+			
+			tile.vSlot[i].eConnect.add(tile.eSlot[(i) % 6])
+			tile.vSlot[i].eConnect.add(tile.eSlot[(i + 5) % 6])
+			tile.eSlot[i].eConnect.add(tile.vSlot[(i) % 6])
+			tile.eSlot[i].eConnect.add(tile.vSlot[(i + 1) % 6])
+		}
+	}
+
+	// for harbor exchange rate
+	for(let harbor of harbors) {
+		board[harbor[0]][harbor[1]].vSlot[harbor[2]].exchange = harbor[3]
+	}
+}
+
+// get the length of longest road of the player
+function getRoadLength(player) {
+	let roadSlots = []
+	for(let token of tokens) {
+		if(token.type == road && token.player == player) {
+			roadSlots.push(token.slot)
+		}
+	}
+	return roadSlots.length
 }
 
 function addToken(player, slot, type) {
@@ -312,7 +349,14 @@ function addToken(player, slot, type) {
 		slot.token = token
 		tokens.push(token)
 		player.road--
-		player.allRoad++
+		player.allRoad = getRoadLength(player)
+		addLog(player.color + ' built a road', 'brown')
+		if(player.allRoad >= 5) {
+			if(!maxRoadPlayer || player.allRoad > maxRoadPlayer.allRoad) {
+				maxRoadPlayer = player
+				addLog(player.color + ' got 2 points of Longest Road', 'brown')
+			}
+		}
 	} else if(type == city || type == settlement) {
 		let token = {
 			type: type,
@@ -330,12 +374,14 @@ function addToken(player, slot, type) {
 		if(type == city) {
 			player.settlement++
 			player.city--
+			addLog(player.color + ' built a city', 'brown')
 		} else {
 			if(slot.exchange >= 0) {
 				player.exchange[slot.exchange] = true
 				updateExchangeRate()
 			}
 			player.settlement--
+			addLog(player.color + ' built a settlement', 'brown')
 		}
 	} else if(type == robber) {
 		robberToken.tile = slot
@@ -518,17 +564,24 @@ function rob2() {
 		})
 		saveCurPlayer = curPlayer
 		curPlayer = robPlayers[0].player.id
-		addHighlight()
+		updatePlayerDisplay()
 	}
 }
 
 function useDevelop(i) {
 	let player = players[curPlayer]
-	let dev = player.develop[i]
+	let devId = player.develop[i]
+	let dev = devTypes[devId]
 	switch(dev.type) {
 		case soldier: {
 			rob()
 			player.allSoldier++
+			if(player.allSoldier >= 3) {
+				if(!maxArmyPlayer || player.allSoldier > maxArmyPlayer.allSoldier) {
+					maxArmyPlayer = player
+					addLog(player.color + ' got 2 points of Largest Army', 'brown')
+				}
+			}
 			break;
 		}
 		case yearOfPlenty: {
@@ -598,7 +651,7 @@ function clickResource(res) {
 						curPlayer = saveCurPlayer
 						curToken.shift()
 					}
-					addHighlight()
+					updatePlayerDisplay()
 				}
 				drawRes()
 				drawAll()
@@ -655,17 +708,19 @@ function addRoadBuildingTokens() {
 	}
 }
 
-function next() {
+function next(manual) {
 	if(curToken[0]) {
 		return
 	}
+
 	if(stage == stageInit) {
 		stage = stageSettle1
 		phase = 0
 		curPlayer = 0
-		addHighlight()
+		updatePlayerDisplay()
 		addInitialTokens()
 	} else if(stage == stageSettle1) {
+		saveGame()
 		removeHighlight()
 		curPlayer++
 		if(curPlayer >= players.length) {
@@ -681,9 +736,10 @@ function next() {
 			}
 			curPlayer = players.length - 1
 		}
-		addHighlight()
+		updatePlayerDisplay()
 		addInitialTokens()
 	} else if(stage == stageSettle2) {
+		saveGame()
 		removeHighlight()
 		curPlayer--
 		if(curPlayer < 0) {
@@ -692,20 +748,22 @@ function next() {
 		} else {
 			addInitialTokens()
 		}
-		addHighlight()
+		updatePlayerDisplay()
 	} else {
-		removeHighlight()
-		curPlayer++
-		if(curPlayer >= players.length) {
-			curPlayer = 0
-		}
+		// move develement that just got, to usable list
 		let player = players[curPlayer]
 		if(player.develop2.length > 0) {
 			player.develop = player.develop.concat(player.develop2)
 			player.develop2 = []
 		}
+		saveGame()
+		removeHighlight()
+		curPlayer++
+		if(curPlayer >= players.length) {
+			curPlayer = 0
+		}
 
-		addHighlight()
+		updatePlayerDisplay()
 		let dice1 = Math.floor(Math.random() * 6) + 1
 		let dice2 = Math.floor(Math.random() * 6) + 1
 		let dice = dice1 + dice2
@@ -792,7 +850,7 @@ const cssColor = [
 ]
 
 // let cssRulePlayer
-function addHighlight() {
+function updatePlayerDisplay() {
 	// cssRulePlayer.style.backgroundColor = cssColor[curPlayer]
 	// tableRes.rows[curPlayer + 1].className = "highlight"
 	let player = players[curPlayer]
@@ -817,24 +875,24 @@ function edit() {
 	}
 }
 
-// remove all cars
-function empty() {
-	cars = []
-	drawAll()
-	if(editMode) {
-		drawBackup()
-	}
-}
-
 function drawRes() {
 	let player = players[curPlayer]
 	for(let res = 1;res < 6;res++) {
 		tableRes.rows[1].cells[res - 1].innerHTML = player.res[res]
 	}
 	for(let [index, p] of players.entries()) {
+		p.allScore = p.score
+	}
+	if(maxArmyPlayer) {
+		maxArmyPlayer.allScore += 2
+	}
+	if(maxRoadPlayer) {
+		maxRoadPlayer.allScore += 2
+	}
+	for(let [index, p] of players.entries()) {
 		tableScore.rows[index + 1].cells[1].innerHTML = p.allSoldier
 		tableScore.rows[index + 1].cells[2].innerHTML = p.allRoad
-		tableScore.rows[index + 1].cells[3].innerHTML = p.score
+		tableScore.rows[index + 1].cells[3].innerHTML = p.allScore
 	}
 	if(player.score >= 10) {
 		addLog(player.color + ' has won the game', 'red')
@@ -915,19 +973,20 @@ function drawAll(c) {
 	}
 	let devX = devDrawPos.x
 	let player = players[curPlayer]
-	for(let dev of player.develop) {
+	for(let devId of player.develop) {
+		let dev = devTypes[devId]
 		draw('dev' + dev.id, grid * devX + offsetX, grid * devDrawPos.y + offsetY, devDrawPos.width * grid, devDrawPos.height * grid)
 		devX -= devDrawPos.interval
 	}
 	if(player.develop2.length > 0) {
 		ctx.globalAlpha = 0.5
-		for(let dev of player.develop2) {
+		for(let devId of player.develop2) {
+			let dev = devTypes[devId]
 			draw('dev' + dev.id, grid * devX + offsetX, grid * devDrawPos.y + offsetY, devDrawPos.width * grid, devDrawPos.height * grid)
 			devX -= devDrawPos.interval
 		}
 		ctx.globalAlpha = 1
 	}
-	// drawBackup()
 }
 
 function drawToken(token) {
@@ -947,86 +1006,6 @@ function rotate(arr, r) {
 		return [1 - arr[0], 1 - arr[1]]
 	} else if(r == 3) {
 		return [arr[1], 1 - arr[0]]
-	}
-}
-
-
-function placeToken(tile, ex, ey) {
-	let player = players[curPlayer]
-	if(!editMode && player.token == 0) {
-		return
-	}
-	let x = grid * tile.x + offsetX
-	let y = grid * tile.y + offsetY
-	if(tile.type.place) {
-		for(let [index, place] of tile.type.place.entries()) {
-			let placeR = rotate(place, tile.rotate)
-			let px = x + grid * placeR[0] * zoomTile
-			let py = y + grid * placeR[1] * zoomTile
-			if(Math.abs(ex - px) < grid / 3 &&
-					Math.abs(ey - py) < grid / 3) {
-
-				let group = tile.groups[index]
-				if(group && group.tokens.length > 0) {
-					return
-				}
-				
-				if(!tile.tokens) {
-					tile.tokens = [];
-				}
-				tile.tokens[index] = curPlayer
-				let token = {tile : tile, index : index, player : player, type : place[2]}
-				tokens.push(token)
-				if(group) {
-					group.tokens.push(token)
-				}
-				if(!editMode) {
-					player.token--
-					next()
-				}
-				return
-			}
-		}
-	}
-}
-
-const backupStartX = 8
-function drawBackup() {
-	let startX = backupStartX
-	let startY = 0
-	let w = 0.5
-	if(editMode) {
-		for(let [index, tileType] of tileTypes.entries()) {
-			draw(index, grid * startX, grid * startY, grid*w, grid*w)
-			tileType.position = [startX, startY, w, w];	// TODO: should be one time job
-			startY += w + 0.02
-			if((index + 1) % 16 == 0) {
-				startX += w + 0.02
-				startY = 0
-			}
-		}
-	} else {
-		if(tileStack.length > 0) {
-			if(!lastTile) {
-				draw(tileStack[0], grid * startX, grid * startY, grid*0.8, grid*0.8)
-			}
-			let player = players[curPlayer]
-
-			startX = backupStartX
-			startY = 1.1
-			ctx.globalAlpha = 0.5
-			draw(player.color, grid * startX, grid * startY, grid/4, grid/4)
-			ctx.globalAlpha = 1
-			startX += 0.3
-			for(let i = 0;i < player.token;i++) {
-				draw(player.color, grid * startX, grid * startY, grid/4, grid/4)
-				startX += 0.3
-				if(i == 2) {
-					startX = backupStartX
-					startY += 0.3
-				}
-			}
-		}
 	}
 }
 
@@ -1134,168 +1113,14 @@ function touchstart(ex, ey) {
 			}
 		}
 	}
-	if(1) return
-	let x = ex / grid
-	let y = ey / grid
-	
-	if(curTile4Token) {	// place token or cancel
-		placeToken(curTile4Token, ex, ey)
-		curTile4Token = undefined
-		drawAll()
-		return
-	}
-
-	if(editMode) {
-		for(let [index, tileType] of tileTypes.entries()) {
-			if(x >= tileType.position[0] && x < tileType.position[2] + tileType.position[0] &&
-				y >= tileType.position[1] && y < tileType.position[3] + tileType.position[1]) {
-				curTile = {x : -1, y : -1, type : tileTypes[index], rotate : curRotate}
-				return
-			}
-		}
-	} else if(tileStack.length > 0 && !lastTile){
-		if(ex > backupStartX * grid && ey < grid) {
-			curTile = {x : -1, y : -1, type : tileTypes[tileStack[0]], rotate : curRotate}
-			return
-		}
-	}
-	
-	let ox = x - offsetX / grid
-	let oy = y - offsetY / grid
-	for(let tile of tiles) {
-		if(ox >= tile.x && ox < tile.x + 1 &&
-			oy >= tile.y && oy < tile.y + 1) {
-
-			if(!editMode) {
-				if(!lastTile || lastTile != tile) {
-					break
-				}
-			} else {
-				// tiles.pop()
-				// drawAll()
-				// break;
-			}
-			curTile4Token = tile
-			return
-		}
-	}
-
-	if(ex < 850 && ey < 850) {
-		dragX = ex - offsetX
-		dragY = ey - offsetY
-	}
 }
 
 function touchmove(ex, ey) {
-	if(1) return
-	if(dragX != null) {
-		offsetX = ex - dragX
-		offsetY = ey - dragY
-		drawAll()
-		return
-	}
-
-	let x = Math.floor((ex - offsetX) / grid)
-	let y = Math.floor((ey - offsetY) / grid)
-	if(true) {
-		if(curTile) {
-			if(x >= 0 && x <= boardWidth && y >= 0 && y <= boardWidth) {
-				let board = scores.board
-				let vacant = board[x][y] == undefined
-				let connected = false
-				let connect = curTile.type.connect
-				let isRiver = curTile.type.isRiver	// river must connect to river
-				if(vacant) {
-					let tile = board[x-1][y];
-					if(tile) {
-						vacant = connect[1 + curTile.rotate & 3] == tile.type.connect[3 + tile.rotate & 3]
-						if(vacant && (!isRiver || isRiver && connect[1 + curTile.rotate & 3] == river)) {
-							connected = true;
-						}
-					}
-				}
-				if(vacant) {
-					let tile = board[x+1][y];
-					if(tile) {
-						vacant = connect[3 + curTile.rotate & 3] == tile.type.connect[1 + tile.rotate & 3]
-						if(vacant && (!isRiver || isRiver && connect[3 + curTile.rotate & 3] == river)) {
-							connected = true;
-						}
-					}
-				}
-				if(vacant) {
-					let tile = board[x][y-1];
-					if(tile) {
-						vacant = connect[0 + curTile.rotate & 3] == tile.type.connect[2 + tile.rotate & 3]
-						if(vacant && (!isRiver || isRiver && connect[ + curTile.rotate & 3] == river)) {
-							connected = true;
-						}
-					}
-				}
-				if(vacant) {
-					let tile = board[x][y+1];
-					if(tile) {
-						vacant = connect[2 + curTile.rotate & 3] == tile.type.connect[0 + tile.rotate & 3]
-						if(vacant && (!isRiver || isRiver && connect[2 + curTile.rotate & 3] == river)) {
-							connected = true;
-						}
-					}
-				}
-				if(vacant && connected) {
-					curTile.x = x
-					curTile.y = y
-				} else {
-					curTile.x = -1
-				}
-			} else {
-				curTile.x = -1
-			}
-			if(curTile.x == -1) {
-				ctx.clearRect(0,0,canvas.width,canvas.height); 
-				drawAll()
-				draw(curTile.type.id, ex-grid/4, ey-grid/4, grid/2, grid/2, curRotate)
-			} else {
-				drawAll();
-				draw(curTile.type.id, grid * curTile.x+offsetX, grid * curTile.y+offsetY, grid, grid, curRotate)
-				drawBackup()
-			}
-		}
-	}
+	
 }
 
 function touchend(ex, ey) {
-	if(1) return
-	if(tileStack.length > 0 && !lastTile && !editMode){
-		if(ex > 8 * grid && ey < grid) {
-			rotateBackup()
-		}
-	}
-	if(curTile) {
-		if(curTile.x != -1) {
-			tiles.push(curTile)
-			scores.addTile(curTile)
-			if(!editMode) {
-				tileStack.shift()
-				tilesLeft.innerHTML = tileStack.length
-				lastTile = curTile
-				if(players[curPlayer].token == 0) {
-					next()
-				} else {
-					btnNext.disabled = false
-				}
-			} else {
-				saveGame()
-			}
-		}
-		curTile = undefined
-		drawAll()
-	}
-	dragX = null
-}
 
-function rotateBackup() {
-	curRotate = (curRotate + 1) & 3
-	drawAll()
 }
 
 let gameId = -1
@@ -1304,10 +1129,19 @@ function saveGame() {
 	try {
 		let game = {
 			id : gameId,
+			stage : stage,
+			robberTile: robberToken.tile.id,
 			players : players.map(item => {
 				return {
 					id : item.id,
-					score : item.score
+					road : item.road,
+					settlement : item.settlement,
+					city : item.city,
+					allSoldier: item.allSoldier,
+					allRoad: item.allRoad,
+					res: item.res,
+					score : item.score,
+					develop : item.develop
 				}
 			}),
 			tiles : tiles.map(item => {
@@ -1315,19 +1149,20 @@ function saveGame() {
 					x : item.x,
 					y : item.y,
 					type : item.type.id,
-					rotate : item.rotate
+					number : item.number
 				}
 			}),
 			tokens : tokens.map(item => {
 				return {
-					tile : item.tile.id,
-					index : item.index,
+					tile: item.slot.tile.id,
+					index: item.slot.index,
 					player : item.player.id,
 					type : item.type
 				}
 			}),
-			stack : tileStack,
-			curPlayer : curPlayer
+			devStack : devStack,
+			curPlayer : curPlayer,
+			log: labelHistory.innerHTML
 		}
 		localStorage.setItem("catan"+gameId, JSON.stringify(game));
 		games[gameId] = game
@@ -1353,20 +1188,19 @@ function loadAllGame() {
 
 
 function loadImages(sources, callback){
-	var count = 0,
-			imgNum = 0
+	var count = 0, imgNum = 0
 	for(let src of sources){
-			imgNum++
+		imgNum++
 	}
 	for(let src of sources){
-			images[src] = new Image(src);
-			images[src].onload = images[src].onerror = function(){
-					if(++count >= imgNum){
-							callback(images)
-					}
-			};
+		images[src] = new Image(src);
+		images[src].onload = images[src].onerror = function(){
+			if(++count >= imgNum){
+				callback(images)
+			}
+		};
 
-			images[src].src = 'res/' + src + '.png'
+		images[src].src = 'res/' + src + '.png'
 	}
 }
 

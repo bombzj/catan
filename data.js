@@ -152,7 +152,8 @@ const seaPos = [
 	[0.95, 2.6, 11/12],
 ]
 
-const vMatch = [
+// each slots of a tile connect to near slot
+const vConnects = [
 	[-1, 0, 2,		0, -1, 4],
 	[0, -1, 3,		1, -1, 5],
 	[1, -1, 4,		1, 0, 0],
@@ -160,7 +161,8 @@ const vMatch = [
 	[0, 1, 0,		-1, 1, 2],
 	[-1, 1, 1,		-1, 0, 3],
 ]
-const eMatch = [
+// each slots of a tile connect to near slot
+const eConnects = [
 	[0, -1, 3],
 	[1, -1, 4],
 	[1, 0, 5],

@@ -80,7 +80,7 @@
         <tr><td>
             <button id="btnConfirmBuy" onclick="javascript:confirmBuy()" disabled="disabled">ok</button>
             <button id="btnCancelBuy" onclick="javascript:cancelBuy()" disabled="disabled">cancel</button>
-            <button id="btnNext" onclick="javascript:next()">next</button>
+            <button id="btnNext" onclick="javascript:next(true)">next</button>
         </td></tr>
         <tr><td class="score">
             dice roll: <span id="labelDice"></span><br/>
@@ -138,10 +138,6 @@
             <input id="btnDev" type="image" src="res/dev.png" onclick="javascript:buyDev()" width="30px"> <span id="labelDev"></span>
         </td></tr>
         <tr style="display:none"><td>
-            <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>
-            <button id="btnNextGame" onclick="javascript:switchGame(1)">&gt;&gt;</button>
-        </td></tr>
-        <tr style="display:none"><td>
             <button id="btnDelete" onclick="javascript:deleteTile()">delete</button>
         </td></tr>
         <tr><td>
@@ -164,6 +160,10 @@
         </td></tr>
         <tr><td>
             <div id="labelHistory"></div>
+        </td></tr>
+        <tr><td>
+            <button id="btnPreviousGame" onclick="javascript:switchGame(-1)">&lt;&lt;</button>
+            <button id="btnNextGame" onclick="javascript:switchGame(1)">&gt;&gt;</button>
         </td></tr>
     </table>
 </body>
