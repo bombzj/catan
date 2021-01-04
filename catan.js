@@ -346,14 +346,63 @@ function getRoadLength(player) {
 			roadSlots.add(token.slot)
 		}
 	}
-	let limitTimes = roadSlots.size()
+	let limitTimes = roadSlots.size
+	let segments = []
 	for(let i = 0;i < limitTimes;i++) {	// limit times to prevent dead cycle
-		if(roadSlots.size() == 0) {
+		if(roadSlots.size == 0) {
 			break
 		}
-		let slot = roadSlots.values().next()
-	}
+		let seg = {
+			edge: [],
+			vertex: []
+		}
+		segments.push(seg)
+		let slot = roadSlots.values().next().value
+		roadSlots.delete(slot)
+		seg.edge.push(slot)
+		for(let vc of slot.vConnect) {
+			let curV = vc
+			let curE = slot
+			for(let i = 0;i < 15;i++) {		// prevent dead cycle
+				if(curV.token && curV.token.player != player) {
+					seg.vertex.push(curV)
+					break
+				} else {
+					let next
+					for(let ec of curV.eConnect) {
+						if(ec != curE && ec.token && ec.token.player == player) {
+							if(next) {
+								next = undefined	// break if intersection
+								break
+							} else {
+								next = ec	// go ahead if line
+							}
+						}
+					}
+					if(next) {
+						curV = getNext(next.vConnect, curV)
+						curE = next
+						roadSlots.delete(next)
+						seg.edge.push(next)
+					} else {	// end of this path
+						seg.vertex.push(curV)
+						break
+					}
+				}
+			}
+		}
+
+	}debugger
 	return roadSlots.length
+}
+
+function getNext(slots, from) {
+	for(let slot of slots) {
+		if(slot != from) {
+			return slot
+		}
+	}
+	debugger		// not found???
 }
 
 function addToken(player, slot, type) {
