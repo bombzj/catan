@@ -392,10 +392,11 @@ function getRoadLength(player) {
 			}
 		}
 
-	}debugger
-	return roadSlots.length
+	}
+	return clacMaxRoad(segments)
 }
 
+// get the other from set
 function getNext(slots, from) {
 	for(let slot of slots) {
 		if(slot != from) {
@@ -403,6 +404,50 @@ function getNext(slots, from) {
 		}
 	}
 	debugger		// not found???
+}
+
+let maxRoadResult
+function clacMaxRoad(segments) {
+	// initialize for calc
+	let vmap = new Map()	// vertex map
+	for(let seg of segments) {
+		for(let v of seg.vertex) {
+			let v2 = vmap.get(v)
+			if(v2) {
+				v2.segments.push(seg)
+			} else {
+				vmap.set(v, {
+					segments: [seg]
+				})
+			}
+		}
+	}
+	for(let seg of segments) {
+		seg.count = seg.edge.length
+		seg.vertex2 = seg.vertex.map(item => vmap.get(item))
+	}
+	maxRoadResult = 0
+	for(let seg of segments) {
+		seg.pass = true
+		for(let vx of seg.vertex2) {
+			iterMaxRoad(seg, vx, seg.count)
+		}
+		seg.pass = undefined
+	}
+	return maxRoadResult
+}
+
+function iterMaxRoad(startSeg, startV, len) {
+	if(len > maxRoadResult) {
+		maxRoadResult = len
+	}
+	for(let seg of startV.segments) {
+		if(seg != startSeg && !seg.pass) {
+			seg.pass = true
+			iterMaxRoad(seg, startV == seg.vertex2[0] ? seg.vertex2[1] : seg.vertex2[0], len + seg.count)
+			seg.pass = undefined
+		}
+	}
 }
 
 function addToken(player, slot, type) {
