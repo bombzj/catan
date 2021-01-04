@@ -1,5 +1,5 @@
 
-let ctx, grid = 110, images = {}, cars, curTile, touchable = false, board=[], vSlots = [], eSlots = [], curMove, editMode = false, solving = false, curRotate = 0
+let ctx, grid = 110, images = {}, cars, curTile, touchable = false, board=[], vSlots, eSlots, curMove, editMode = false, solving = false, curRotate = 0
 let offsetX = 15, offsetY = -190
 let touchX, touchY, devStack, tiles
 let players
@@ -160,8 +160,8 @@ function restart(playerNumber = 2, clear = false, test = false) {
 		stage = game.stage
 		for(let player of players) {
 			checkMaxArmy(player, false)
-			checkMaxRoad(player, false)
 		}
+		calcAllRoads()
 		labelHistory.innerHTML = game.log
 		labelHistory.scrollTop = labelHistory.scrollHeight
 	} else {
@@ -262,6 +262,8 @@ function restart(playerNumber = 2, clear = false, test = false) {
 // initialize tile slots and connections
 function initTileData() {
 	board = []
+	vSlots = []
+	eSlots = []
 	for(let i = 0;i < 10;i++) {
 		board[i] = []
 	}
@@ -396,7 +398,7 @@ function getRoadLength(player) {
 		}
 
 	}
-	return clacMaxRoad(segments)
+	return calcMaxRoad(segments, player)
 }
 
 // get the other from set
@@ -409,10 +411,10 @@ function getNext(slots, from) {
 	debugger		// not found???
 }
 
-let maxRoadResult
-function clacMaxRoad(segments) {
+var maxRoadResult
+function calcMaxRoad(segments, player) {
 	// initialize for calc
-	let vmap = new Map()	// vertex map
+	let vmap = new Map()	// vertex map, connect all segments by vertex
 	for(let seg of segments) {
 		for(let v of seg.vertex) {
 			let v2 = vmap.get(v)
@@ -420,7 +422,8 @@ function clacMaxRoad(segments) {
 				v2.segments.push(seg)
 			} else {
 				vmap.set(v, {
-					segments: [seg]
+					segments: [seg],
+					blocked: v.token && v.token.player != player		// blocked by another player's settlement
 				})
 			}
 		}
@@ -443,6 +446,9 @@ function clacMaxRoad(segments) {
 function iterMaxRoad(startSeg, startV, len) {
 	if(len > maxRoadResult) {
 		maxRoadResult = len
+	}
+	if(startV.blocked) {	// blocked by another player's settlement
+		return
 	}
 	for(let seg of startV.segments) {
 		if(seg != startSeg && !seg.pass) {
@@ -498,6 +504,29 @@ function addToken(player, slot, type) {
 		robberToken.tile = slot
 	}
 	curToken.shift()
+}
+
+// when a settlement is place, need to update all road to see if blocked
+function calcAllRoads() {
+	let max = 0
+	let maxPlayer
+	for(let player of players) {
+		try {
+			player.allRoad = getRoadLength(player)
+			if(player.allRoad >= 5 && player.allRoad > max) {
+				max = player.allRoad
+				maxPlayer = player
+			}
+		} catch (e) {console.error(e)}
+	}
+	if(maxRoadPlayer != maxPlayer) {
+		if(maxPlayer) {
+			maxRoadPlayer = maxPlayer
+			addLog(maxRoadPlayer.color + ' got 2 points of Longest Road', 'brown')
+		} else {
+			maxRoadPlayer = undefined
+		}
+	}
 }
 
 function buyToken(type) {
@@ -596,6 +625,9 @@ function confirmBuy() {
 	if(token) {
 		if(token.slot) {
 			addToken(token.player, token.slot, token.type)
+			if(token.type == settlement && stage == stagePlay) {
+				calcAllRoads()
+			}
 			btnConfirmBuy.disabled = true
 			btnCancelBuy.disabled = true
 			if(curToken[0]) {
@@ -690,12 +722,12 @@ function checkMaxArmy(player, log = false) {
 		}
 	}
 }
-function checkMaxRoad(player, log = false) {
+function checkMaxRoad(player) {
 	if(player.allRoad >= 5) {
 		if(!maxRoadPlayer || player.allRoad > maxRoadPlayer.allRoad) {
 			maxRoadPlayer = player
-			if(log) {
-				addLog(player.color + ' got 2 points of Longest Road', 'brown')
+			if(stage == stagePlay) {
+				addLog(maxRoadPlayer.color + ' got 2 points of Longest Road', 'brown')
 			}
 		}
 	}
