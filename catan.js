@@ -360,6 +360,8 @@ function getRoadLength(player) {
 		let slot = roadSlots.values().next().value
 		roadSlots.delete(slot)
 		seg.edge.push(slot)
+		let passed = new Set()
+		passed.add(slot)
 		for(let vc of slot.vConnect) {
 			let curV = vc
 			let curE = slot
@@ -379,7 +381,8 @@ function getRoadLength(player) {
 							}
 						}
 					}
-					if(next) {
+					if(next && !passed.has(next)) {	// next == slot means circle
+						passed.add(next)
 						curV = getNext(next.vConnect, curV)
 						curE = next
 						roadSlots.delete(next)
@@ -460,7 +463,9 @@ function addToken(player, slot, type) {
 		slot.token = token
 		tokens.push(token)
 		player.road--
-		player.allRoad = getRoadLength(player)
+		try {
+			player.allRoad = getRoadLength(player)
+		} catch (e) {console.error(e)}
 		addLog(player.color + ' built a road', 'brown')
 		checkMaxRoad(player)
 	} else if(type == city || type == settlement) {
