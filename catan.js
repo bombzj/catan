@@ -340,11 +340,18 @@ function initTileData() {
 
 // get the length of longest road of the player
 function getRoadLength(player) {
-	let roadSlots = []
+	let roadSlots = new Set()
 	for(let token of tokens) {
 		if(token.type == road && token.player == player) {
-			roadSlots.push(token.slot)
+			roadSlots.add(token.slot)
 		}
+	}
+	let limitTimes = roadSlots.size()
+	for(let i = 0;i < limitTimes;i++) {	// limit times to prevent dead cycle
+		if(roadSlots.size() == 0) {
+			break
+		}
+		let slot = roadSlots.values().next()
 	}
 	return roadSlots.length
 }
