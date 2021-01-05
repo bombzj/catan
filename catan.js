@@ -362,36 +362,34 @@ function getRoadLength(player) {
 		let slot = roadSlots.values().next().value
 		roadSlots.delete(slot)
 		seg.edge.push(slot)
-		let passed = new Set()
-		passed.add(slot)
 		for(let vc of slot.vConnect) {
 			let curV = vc
 			let curE = slot
 			for(let i = 0;i < 15;i++) {		// prevent dead cycle
 				if(curV.token && curV.token.player != player) {
-					seg.vertex.push(curV)
 					break
 				} else {
-					let next
+					let next, intersect = false
 					for(let ec of curV.eConnect) {
 						if(ec != curE && ec.token && ec.token.player == player) {
 							if(next) {
-								next = undefined	// break if intersection
+								intersect = true	// break if intersection
 								break
 							} else {
 								next = ec	// go ahead if line
 							}
 						}
 					}
-					if(next && !passed.has(next)) {	// next == slot means circle
-						passed.add(next)
+					if(next == slot || !next) {	// end of this path, next == slot means circle
+						break
+					} else if(intersect) {	// end of this path with intersection
+						seg.vertex.push(curV)
+						break
+					} else {	// path go on
 						curV = getNext(next.vConnect, curV)
 						curE = next
 						roadSlots.delete(next)
 						seg.edge.push(next)
-					} else {	// end of this path
-						seg.vertex.push(curV)
-						break
 					}
 				}
 			}
@@ -411,7 +409,8 @@ function getNext(slots, from) {
 	debugger		// not found???
 }
 
-var maxRoadResult
+let maxRoadResult
+// calculate longest path in graph
 function calcMaxRoad(segments, player) {
 	// initialize for calc
 	let vmap = new Map()	// vertex map, connect all segments by vertex
@@ -434,6 +433,9 @@ function calcMaxRoad(segments, player) {
 	}
 	maxRoadResult = 0
 	for(let seg of segments) {
+		if(seg.count > maxRoadResult) {	// maybe there is no vertex on this segment
+			maxRoadResult = seg.count
+		}
 		seg.pass = true
 		for(let vx of seg.vertex2) {
 			iterMaxRoad(seg, vx, seg.count)
@@ -447,14 +449,21 @@ function iterMaxRoad(startSeg, startV, len) {
 	if(len > maxRoadResult) {
 		maxRoadResult = len
 	}
+	if(!startV) {	// end of path
+		return
+	}
 	if(startV.blocked) {	// blocked by another player's settlement
 		return
 	}
 	for(let seg of startV.segments) {
 		if(seg != startSeg && !seg.pass) {
-			seg.pass = true
-			iterMaxRoad(seg, startV == seg.vertex2[0] ? seg.vertex2[1] : seg.vertex2[0], len + seg.count)
-			seg.pass = undefined
+			if(seg.vertex2.length < 2) {
+				iterMaxRoad(seg, undefined, len + seg.count)	// end of path
+			} else {
+				seg.pass = true
+				iterMaxRoad(seg, startV == seg.vertex2[0] ? seg.vertex2[1] : seg.vertex2[0], len + seg.count)
+				seg.pass = undefined
+			}
 		}
 	}
 }
