@@ -421,8 +421,7 @@ function calcMaxRoad(segments, player) {
 				v2.segments.push(seg)
 			} else {
 				vmap.set(v, {
-					segments: [seg],
-					blocked: v.token && v.token.player != player		// blocked by another player's settlement
+					segments: [seg]
 				})
 			}
 		}
@@ -432,6 +431,7 @@ function calcMaxRoad(segments, player) {
 		seg.vertex2 = seg.vertex.map(item => vmap.get(item))
 	}
 	maxRoadResult = 0
+	// try every segment as beginning
 	for(let seg of segments) {
 		if(seg.count > maxRoadResult) {	// maybe there is no vertex on this segment
 			maxRoadResult = seg.count
@@ -449,19 +449,16 @@ function iterMaxRoad(startSeg, startV, len) {
 	if(len > maxRoadResult) {
 		maxRoadResult = len
 	}
-	if(!startV) {	// end of path
-		return
-	}
-	if(startV.blocked) {	// blocked by another player's settlement
-		return
-	}
 	for(let seg of startV.segments) {
 		if(seg != startSeg && !seg.pass) {
-			if(seg.vertex2.length < 2) {
-				iterMaxRoad(seg, undefined, len + seg.count)	// end of path
+			let newLen = len + seg.count
+			if(seg.vertex2.length < 2) {	// end of path
+				if(newLen > maxRoadResult) {
+					maxRoadResult = newLen
+				}
 			} else {
 				seg.pass = true
-				iterMaxRoad(seg, startV == seg.vertex2[0] ? seg.vertex2[1] : seg.vertex2[0], len + seg.count)
+				iterMaxRoad(seg, startV == seg.vertex2[0] ? seg.vertex2[1] : seg.vertex2[0], newLen)
 				seg.pass = undefined
 			}
 		}
