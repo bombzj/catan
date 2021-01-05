@@ -82,8 +82,8 @@ function init() {
 		// touchend(event.changedTouches[0].clientX - bcr.x, event.changedTouches[0].clientY - bcr.y)
 	}, false);
 
-	// document.styleSheets[0].insertRule('.cssPlayer {background-color: ' + cssColor[curPlayer] + '}', 0);
-	// cssRulePlayer = document.styleSheets[0].rules[0]
+	document.styleSheets[0].insertRule('.cssPlayerTd {}', 0);
+	cssRulePlayer = document.styleSheets[0].rules[0]
 	loadAllGame()
 	restart()
 }
@@ -652,17 +652,20 @@ function confirmBuy() {
 			let player = players[curPlayer]
 			addToken(player, token.tile, token.type)
 			// check if there's anyone to rob
-			let doRob = false
+			let canRob = new Set()
 			for(let slot of robberToken.tile.vSlot) {
 				if(slot.token && slot.token.player.id != curPlayer) {
-					doRob = true
-					break
+					canRob.add(slot.token.player)
 				}
 			}
-			if(doRob) {
+			if(canRob.size > 1) {
 				curToken.push({
 					type: robber3
 				})
+				blinkPlayer()
+			} else {
+				// only one player can be robbed is in that area
+				doSteal(player, canRob.values().next().value)
 			}
 
 			drawRes()
@@ -709,6 +712,7 @@ function rob2() {
 		}
 	}
 	if(robPlayers.length > 0) {
+		blinkRes()
 		curToken.push({
 			type: robber2
 		})
@@ -757,6 +761,7 @@ function useDevelop(i) {
 			curToken.push({
 				type: yearOfPlenty
 			})
+			blinkRes()
 			break;
 		}
 		case roadBuilding: {
@@ -767,6 +772,7 @@ function useDevelop(i) {
 			curToken.push({
 				type: monopoly
 			})
+			blinkRes()
 			break;
 		}
 		case victoryPoint: {
@@ -844,20 +850,24 @@ function clickPlayer(id) {
 		}
 		let player = players[curPlayer]
 		let from = players[id]	// TODO steal from adjacent settlement or city
-		let res = getRandomResource(from.res)
-		if(res) {
-			player.res[res]++
-			from.res[res]--
-			addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color, 'purple')
-		} else {
-			addLog(player.color + ' stole nothing from ' + from.color, 'purple')
-		}
+		doSteal(player, from)
 		curToken.shift()
 		drawAll()
 		drawRes()
 		btnNext.disabled = false
 		btnConfirmBuy.disabled = true
 		btnCancelBuy.disabled = true
+	}
+}
+
+function doSteal(player, from) {
+	let res = getRandomResource(from.res)
+	if(res) {
+		player.res[res]++
+		from.res[res]--
+		addLog(player.color + ' stole a ' + resourceNames[res] + ' from ' + from.color, 'purple')
+	} else {
+		addLog(player.color + ' stole nothing from ' + from.color, 'purple')
 	}
 }
 
@@ -1040,11 +1050,39 @@ function addLog(log, color) {
 	labelHistory.scrollTop = labelHistory.scrollHeight
 }
 
+function blinkRes() {
+	blinkStyle(resImg.style)
+}
+function blinkPlayer() {
+	blinkStyle(cssRulePlayer.style)
+}
+function blinkStyle(style) {
+	sleep(100).then(function() {
+		style.backgroundColor = "red"
+		return sleep(500)
+	}).then(function() {
+		style.backgroundColor = ""
+		return sleep(500)
+	}).then(function() {
+		style.backgroundColor = "red"
+		return sleep(500)
+	}).then(function() {
+		style.backgroundColor = ""
+		return sleep(500)
+	}).then(function() {
+		style.backgroundColor = "red"
+		return sleep(500)
+	}).then(function() {
+		style.backgroundColor = ""
+		return sleep(500)
+	})
+}
+
 const cssColor = [
 	'#6666ff', '#ff4444', '#55ff55', '#ffff66', '#444444', '#66ff99'
 ]
 
-// let cssRulePlayer
+let cssRulePlayer
 function updatePlayerDisplay() {
 	// cssRulePlayer.style.backgroundColor = cssColor[curPlayer]
 	// tableRes.rows[curPlayer + 1].className = "highlight"
