@@ -671,7 +671,7 @@ function confirmBuy() {
 					type: robber3
 				})
 				blinkPlayer()
-			} else {
+			} else if(canRob.size == 1) {
 				// only one player can be robbed is in that area
 				doSteal(player, canRob.values().next().value)
 			}
