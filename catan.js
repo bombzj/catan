@@ -966,8 +966,8 @@ function next(needSave = true) {
 		removeHighlight()
 		curPlayer--
 		if(curPlayer < 0) {
+			curPlayer = players.length - 1
 			stage = stagePlay
-			curPlayer = 0
 		} else {
 			addInitialTokens()
 		}
