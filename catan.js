@@ -150,6 +150,9 @@ function restart(playerNumber = 2, clear = false, test = false) {
 				slot : slot
 			}
 			slot.token = token
+			if(slot.exchange >= 0) {
+				token.player.exchange[slot.exchange] = true
+			}
 			tokens.push(token)
 		}
 		devStack = game.devStack
