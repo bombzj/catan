@@ -972,7 +972,8 @@ function next(needSave = true) {
 			addInitialTokens()
 		}
 		updatePlayerDisplay()
-	} else {
+	}
+	if(stage == stagePlay) {
 		// move develement that just got, to usable list
 		let player = players[curPlayer]
 		if(player.develop2.length > 0) {
