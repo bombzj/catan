@@ -13,7 +13,7 @@ let robberToken = {}
 let robPlayers = [], saveCurPlayer
 
 let maxArmyPlayer, maxRoadPlayer
-
+let dice1, dice2
 
 function init() {
 	btnDelete.disabled = true
@@ -99,6 +99,7 @@ function restart(playerNumber = 2, clear = false, test = false) {
 	curToken = []
 	maxArmyPlayer = undefined
 	maxRoadPlayer = undefined
+	dice1 = -1
 
 	if(game) {
 		players = game.players.map(item => {
@@ -167,6 +168,10 @@ function restart(playerNumber = 2, clear = false, test = false) {
 		calcAllRoads()
 		labelHistory.innerHTML = game.log
 		labelHistory.scrollTop = labelHistory.scrollHeight
+		if(game.dice1 >= 0) {
+			dice1 = game.dice1
+			dice2 = game.dice2
+		}
 	} else {
 		players = []
 		for(let i = 0;i < playerNumber;i++) {
@@ -974,6 +979,10 @@ function next(needSave = true) {
 			player.develop = player.develop.concat(player.develop2)
 			player.develop2 = []
 		}
+		if(dice1 == -1) {
+			dice1 = Math.floor(Math.random() * 6) + 1
+			dice2 = Math.floor(Math.random() * 6) + 1
+		}
 		if(needSave) {
 			saveGame()
 		}
@@ -984,11 +993,10 @@ function next(needSave = true) {
 		}
 
 		updatePlayerDisplay()
-		let dice1 = Math.floor(Math.random() * 6) + 1
-		let dice2 = Math.floor(Math.random() * 6) + 1
 		let dice = dice1 + dice2
 		addLog('the dice roll is ' + dice)
 		labelDice.innerHTML = dice1 + "+" + dice2
+		dice1 = -1
 		if(dice == 7) {
 			rob2()
 			rob()
@@ -1402,7 +1410,9 @@ function saveGame() {
 			}),
 			devStack : devStack,
 			curPlayer : curPlayer,
-			log: labelHistory.innerHTML
+			log: labelHistory.innerHTML,
+			dice1: dice1,
+			dice2: dice2
 		}
 		localStorage.setItem("catan"+gameId, JSON.stringify(game));
 		games[gameId] = game
