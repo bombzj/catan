@@ -1138,9 +1138,9 @@ function drawRes() {
 		tableScore.rows[index + 1].cells[1].innerHTML = p.allSoldier
 		tableScore.rows[index + 1].cells[2].innerHTML = p.allRoad
 		tableScore.rows[index + 1].cells[3].innerHTML = p.allScore
-	}
-	if(player.score >= 10) {
-		addLog(player.color + ' has won the game', 'red')
+		if(p.allScore >= 10) {
+			addLog(p.color + ' has won the game', 'red')
+		}
 	}
 	labelRoad.innerHTML = player.road
 	labelSettlement.innerHTML = player.settlement
