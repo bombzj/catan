@@ -9,7 +9,8 @@
 <script src="catan.js?i=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
 <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
-<script src="https://libs.baidu.com/jqueryui/1.8.22/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
 <style>
     body {
         margin: 0px
@@ -77,6 +78,7 @@
         overflow-x:hidden;
         overflow-y:auto;
     }
+    .noTitleStuff .ui-dialog-titlebar {display:none}
 </style>
 </head>
 <body onselectstart="return false;">
@@ -178,16 +180,48 @@
             <button onclick="javascript:if(confirm('Are you sure?'))restart(3, true, true)">test</button>
         </td></tr>
         <tr><td>
-            restart:
-            <button onclick="javascript:if(confirm('Are you sure?'))restart(2, true)">2p</button>
-            <button onclick="javascript:if(confirm('Are you sure?'))restart(3, true)">3p</button>
-            <button onclick="javascript:if(confirm('Are you sure?'))restart(4, true)">4p</button>
+            <button onclick="javascript:restartOption()">restart</button>
         </td></tr>
     </table>
+    <div id="dialogNumber" title="Choose Number">
+        <p>Choose Number</p>
+    </div>
 </body>
 <script>
 
     init()
 
+    function restartOption() {
+        $("#dialogNumber").dialog("open");
+    }
+
+    $(function() {
+        $("#dialogNumber").dialog({
+            dialogClass: 'noTitleStuff',
+            autoOpen: false,
+            resizable: false,
+            draggable: false,
+            height: "auto",
+            width: 400,
+            modal: true,
+            buttons: {
+                "2 players": function() {
+                    $( this ).dialog( "close" );
+                    restart(2, true)
+                },
+                "3 players": function() {
+                    $( this ).dialog( "close" );
+                    restart(3, true)
+                },
+                "4 players": function() {
+                    $( this ).dialog( "close" );
+                    restart(4, true)
+                },
+                Cancel: function() {
+                    $( this ).dialog( "close" );
+                }
+            }
+        });
+    })
 </script>
 </html>

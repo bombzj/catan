@@ -82,8 +82,8 @@ function init() {
 		// touchend(event.changedTouches[0].clientX - bcr.x, event.changedTouches[0].clientY - bcr.y)
 	}, false);
 
-	document.styleSheets[0].insertRule('.cssPlayerTd {}', 0);
-	cssRulePlayer = document.styleSheets[0].rules[0]
+	document.styleSheets[1].insertRule('.cssPlayerTd {}', 0);
+	cssRulePlayer = document.styleSheets[1].rules[0]
 	loadAllGame()
 	restart()
 }
@@ -1459,6 +1459,11 @@ function switchGame(delta) {
 	gameId += delta
 	if(gameId < 0) {
 		gameId = 0
+	} else if(gameId > games.length) {	// no need to create more game if the last one is not yet started/saved
+		gameId = games.length
+	}
+	if(gameId < games.length) {	// reset from local storage
+		games[gameId] = JSON.parse(localStorage.getItem("catan"+gameId))
 	}
 	restart()
 	localStorage.setItem("catanId", gameId);
